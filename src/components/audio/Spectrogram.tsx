@@ -8,9 +8,15 @@ interface SpectrogramProps {
 export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const historyRef = useRef<Uint8Array[]>([])
+  const wasActiveRef = useRef(false)
   const MAX_COLUMNS = 300
 
   useEffect(() => {
+    if (isActive && !wasActiveRef.current) {
+      historyRef.current = []
+    }
+    wasActiveRef.current = isActive
+
     if (isActive && spectrumData.length > 0) {
       historyRef.current.push(new Uint8Array(spectrumData))
       if (historyRef.current.length > MAX_COLUMNS) {

@@ -74,7 +74,7 @@ export function usePitchDetection(processor: AudioProcessor | null) {
       lastVoicedSnapshotRef.current = {
         pitch: detectedPitch,
         formants: detectedFormants,
-        spectrumData: byteFreq,
+        spectrumData: new Uint8Array(byteFreq),
       }
     }
 
@@ -107,7 +107,15 @@ export function usePitchDetection(processor: AudioProcessor | null) {
 
   useEffect(() => {
     if (processor?.isActive) {
+      historyRef.current = []
+      lastVoicedAtRef.current = 0
       lastEmitAtRef.current = 0
+      lastVoicedSnapshotRef.current = {
+        pitch: null,
+        formants: { F1: null, F2: null, F3: null },
+        spectrumData: new Uint8Array(0),
+      }
+      setData(INITIAL_DATA)
       animFrameRef.current = requestAnimationFrame(tick)
     }
 

@@ -53,11 +53,24 @@ async function blobToBase64(blob: Blob): Promise<string> {
 }
 
 function getCandidateBaseURLs(config: ProviderConfig): string[] {
-  const urls = [config.baseURL, ...(config.fallbackBaseURLs ?? [])]
-    .map((v) => v.trim())
-    .filter(Boolean)
+  const candidates = [config.baseURL, ...(config.fallbackBaseURLs ?? [])]
+  const valid = new Set<string>()
 
-  return [...new Set(urls)]
+  for (const raw of candidates) {
+    const value = raw.trim()
+    if (!value) continue
+
+    try {
+      const url = new URL(value)
+      if (url.protocol === 'https:' || url.protocol === 'http:') {
+        valid.add(value)
+      }
+    } catch {
+      // ignore invalid endpoint
+    }
+  }
+
+  return [...valid]
 }
 
 function createModel(config: ProviderConfig, overrideBaseURL?: string) {

@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, ExternalLink } from 'lucide-react'
 import { useStore } from '@tanstack/react-store'
 import { useI18n } from '#/lib/i18n'
@@ -16,6 +16,10 @@ function SettingsPage() {
   const storedProvider = useStore(appStore, (s) => s.provider)
   const [config, setConfig] = useState<ProviderConfig>(storedProvider)
   const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setConfig(storedProvider)
+  }, [storedProvider])
   const [isTesting, setIsTesting] = useState(false)
   const [testMessage, setTestMessage] = useState<string>('')
   const [testOk, setTestOk] = useState<boolean | null>(null)
