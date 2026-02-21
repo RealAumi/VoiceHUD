@@ -19,14 +19,11 @@ export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
 
     if (isActive && spectrumData.length > 0) {
       historyRef.current.push(new Uint8Array(spectrumData))
-      if (historyRef.current.length > MAX_COLUMNS) {
-        historyRef.current.shift()
-      }
+      if (historyRef.current.length > MAX_COLUMNS) historyRef.current.shift()
     }
 
     const canvas = canvasRef.current
     if (!canvas) return
-
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
@@ -40,16 +37,12 @@ export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
     const h = rect.height
     const history = historyRef.current
 
-    if (history.length === 0) {
-      ctx.fillStyle = '#0f172a'
-      ctx.fillRect(0, 0, w, h)
-      return
-    }
+    ctx.fillStyle = '#0b1220'
+    ctx.fillRect(0, 0, w, h)
+
+    if (history.length === 0) return
 
     const binsToShow = Math.floor(history[history.length - 1].length / 4)
-
-    ctx.fillStyle = '#0f172a'
-    ctx.fillRect(0, 0, w, h)
 
     for (let col = 0; col < history.length; col++) {
       const data = history[col]
@@ -63,8 +56,8 @@ export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
 
         const intensity = value / 255
         const r = Math.floor(intensity * intensity * 255)
-        const g = Math.floor(intensity * 200 + 55 * intensity * intensity)
-        const b = Math.floor(100 + intensity * 155)
+        const g = Math.floor(intensity * 180 + 55 * intensity * intensity)
+        const b = Math.floor(120 + intensity * 120)
 
         ctx.fillStyle = `rgb(${r}, ${g}, ${b})`
         ctx.fillRect(x, y - binHeight, colWidth + 1, binHeight)
@@ -73,14 +66,9 @@ export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
   }, [spectrumData, isActive])
 
   return (
-    <div className="rounded-xl bg-slate-900 border border-slate-700 p-4">
-      <h3 className="text-sm font-medium text-slate-300 mb-3">
-        Spectrogram
-      </h3>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-32 rounded-lg"
-      />
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+      <h3 className="mb-3 text-sm font-medium text-slate-700 dark:text-slate-300">Spectrogram</h3>
+      <canvas ref={canvasRef} className="h-36 w-full rounded-lg" />
     </div>
   )
 }
