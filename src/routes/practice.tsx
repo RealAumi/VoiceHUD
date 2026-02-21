@@ -15,6 +15,8 @@ function PracticePage() {
   const { isActive, isSupported, error, start, stop, getProcessor } = useAudioInput()
   const { data } = usePitchDetection(getProcessor())
 
+  const hasSnapshot = data.pitchHistory.length > 0
+
   // Compute average pitch from history
   const validPitches = data.pitchHistory.filter((p): p is number => p !== null)
   const avgPitch = validPitches.length > 0
@@ -68,7 +70,7 @@ function PracticePage() {
             {isActive ? t.practice.stopMic : t.practice.startMic}
           </button>
 
-          {isActive && avgPitch && (
+          {avgPitch && (
             <div className="text-sm text-slate-400">
               {t.practice.avgPitch}:{' '}
               <span className="text-cyan-400 font-mono font-bold">{avgPitch} Hz</span>
@@ -86,14 +88,14 @@ function PracticePage() {
       )}
 
       {/* Permission hint */}
-      {!isActive && !error && isSupported && (
+      {!isActive && !error && isSupported && !hasSnapshot && (
         <p className="text-sm text-slate-500 text-center py-8">
           {t.practice.micPermission}
         </p>
       )}
 
       {/* Voice HUD */}
-      {isActive && (
+      {(isActive || hasSnapshot) && (
         <VoiceHUD data={data} targetRange={targetRange} isActive={isActive} />
       )}
 

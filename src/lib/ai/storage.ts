@@ -1,33 +1,19 @@
 import type { ProviderConfig } from './providers'
-
-const STORAGE_KEY = 'voicehud-ai-provider'
-
-const DEFAULT_CONFIG: ProviderConfig = {
-  id: 'google',
-  apiKey: '',
-  model: 'gemini-3-flash',
-  baseURL: '',
-}
+import {
+  getProvider,
+  setProvider,
+  isProviderConfigured as isConfigured,
+} from '#/lib/store/app-store'
 
 export function getStoredProvider(): ProviderConfig {
-  if (typeof window === 'undefined') return DEFAULT_CONFIG
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_CONFIG
-    return { ...DEFAULT_CONFIG, ...JSON.parse(raw) }
-  } catch {
-    return DEFAULT_CONFIG
-  }
+  return getProvider()
 }
 
 export function setStoredProvider(config: ProviderConfig) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(config))
-  }
+  setProvider(config)
 }
 
 /** Check if the provider has a valid API key configured */
 export function isProviderConfigured(): boolean {
-  const config = getStoredProvider()
-  return config.apiKey.length > 0
+  return isConfigured()
 }
