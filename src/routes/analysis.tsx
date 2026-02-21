@@ -66,6 +66,7 @@ function AnalysisPage() {
         audioBlob={recorder.audioBlob}
         onStartRecording={recorder.startRecording}
         onStopRecording={recorder.stopRecording}
+        onUpload={recorder.loadAudioFile}
         onClear={recorder.clearRecording}
       />
 

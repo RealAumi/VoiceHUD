@@ -70,6 +70,7 @@ export const en = {
     recordButton: 'Start Recording',
     stopButton: 'Stop Recording',
     analyzeButton: 'Analyze',
+    uploadButton: 'Upload Audio',
     result: 'Analysis Result',
     noApiKey: 'Please configure an AI provider in Settings first',
     goToSettings: 'Go to Settings',
