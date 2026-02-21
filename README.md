@@ -1,5 +1,7 @@
 # VoiceHUD
 
+English | [中文](README.zh-CN.md)
+
 Real-time voice visualization + AI analysis for scientific voice training.
 
 ## Features
