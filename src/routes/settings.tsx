@@ -132,6 +132,7 @@ function SettingsPage() {
             placeholder={t.settings.provider.apiKeyPlaceholder}
             className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500"
           />
+          <p className="text-xs text-slate-500">{t.settings.provider.securityNotice}</p>
           {preset?.apiKeyUrl && (
             <a
               href={preset.apiKeyUrl}
@@ -175,6 +176,7 @@ function SettingsPage() {
             placeholder={t.settings.provider.baseURLPlaceholder}
             className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500 read-only:opacity-70"
           />
+          <p className="text-xs text-slate-500">{t.settings.provider.httpsOnlyNotice}</p>
 
           {preset?.endpointCandidates && preset.customBaseURL && (
             <div className="flex flex-wrap gap-2 pt-1">
