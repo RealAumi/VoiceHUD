@@ -14,6 +14,11 @@ export interface AnalysisResult {
   error?: string
 }
 
+export interface ProviderTestResult {
+  ok: boolean
+  message: string
+}
+
 function getVoiceAnalysisPrompt(locale: 'zh' | 'en'): string {
   return locale === 'zh'
     ? `你是一位专业的嗓音训练师和语音治疗师。请分析这段语音录音，提供以下方面的详细反馈：
@@ -36,9 +41,6 @@ function getVoiceAnalysisPrompt(locale: 'zh' | 'en'): string {
 Please respond in English with a friendly and professional tone.`
 }
 
-/**
- * Convert Blob to base64 data string (without data URI prefix)
- */
 async function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -51,9 +53,6 @@ async function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-/**
- * Create a Vercel AI SDK language model from provider config
- */
 function createModel(config: ProviderConfig) {
   const providerType = getPresetType(config.id)
 
@@ -70,22 +69,55 @@ function createModel(config: ProviderConfig) {
       const openai = createOpenAI({
         apiKey: config.apiKey,
         baseURL: config.baseURL,
-        compatibility: 'compatible',
       })
       return openai(config.model)
     }
   }
 }
 
-/**
- * Analyze voice audio using the configured AI provider.
- */
+export async function testProviderConnection(
+  config: ProviderConfig,
+  locale: 'zh' | 'en' = 'zh'
+): Promise<ProviderTestResult> {
+  if (!config.apiKey.trim()) {
+    return {
+      ok: false,
+      message: locale === 'zh' ? '请先填写 API Key' : 'Please fill in API key first',
+    }
+  }
+
+  if (getPresetType(config.id) === 'openai-compatible' && !config.baseURL.trim()) {
+    return {
+      ok: false,
+      message: locale === 'zh' ? '请先填写 API 地址' : 'Please fill in API endpoint first',
+    }
+  }
+
+  try {
+    const model = createModel(config)
+    await generateText({
+      model,
+      prompt: locale === 'zh' ? '回复 "ok"' : 'Reply with "ok"',
+      maxOutputTokens: 10,
+      temperature: 0,
+    })
+
+    return {
+      ok: true,
+      message: locale === 'zh' ? '连接成功，API 可用' : 'Connection successful, API is available',
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error'
+    return { ok: false, message: `API Error: ${message}` }
+  }
+}
+
 export async function analyzeVoice(
   audioBlob: Blob,
   config: ProviderConfig,
   locale: 'zh' | 'en' = 'zh'
 ): Promise<AnalysisResult> {
-  if (!config.apiKey) {
+  if (!config.apiKey.trim()) {
     return {
       text: '',
       error: locale === 'zh' ? '请先设置 API Key' : 'Please set your API Key first',
@@ -94,11 +126,7 @@ export async function analyzeVoice(
 
   try {
     const audioBase64 = await blobToBase64(audioBlob)
-    const mimeType = (audioBlob.type || 'audio/webm') as
-      | 'audio/webm'
-      | 'audio/mp3'
-      | 'audio/wav'
-      | 'audio/mpeg'
+    const mediaType = audioBlob.type || 'audio/webm'
 
     const model = createModel(config)
     const prompt = getVoiceAnalysisPrompt(locale)
@@ -113,13 +141,13 @@ export async function analyzeVoice(
             {
               type: 'file',
               data: audioBase64,
-              mimeType,
+              mediaType,
             },
           ],
         },
       ],
       temperature: 0.7,
-      maxTokens: 2048,
+      maxOutputTokens: 2048,
     })
 
     return { text }
