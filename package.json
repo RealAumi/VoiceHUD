@@ -30,6 +30,9 @@
     "tailwindcss": "^4.1.18",
     "tw-animate-css": "^1.3.6"
   },
+  "pnpm": {
+    "ignoredBuiltDependencies": ["esbuild", "sharp", "workerd"]
+  },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.0.0",
     "@types/node": "^22.10.2",
