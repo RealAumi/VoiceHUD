@@ -48,8 +48,8 @@ function RootDocument({ children }: { children: ReactNode }) {
         <head>
           <HeadContent />
         </head>
-        <body className="dark">
-          <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+        <body>
+          <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f7faf9,white_40%,#f5f7f8_100%)] text-slate-900">
             <Header />
             <main>{children}</main>
           </div>

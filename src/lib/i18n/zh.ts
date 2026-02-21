@@ -1,7 +1,7 @@
 export const zh = {
   common: {
     appName: 'VoiceHUD',
-    appTagline: '你的智能嗓音训练助手',
+    appTagline: 'Voice Hard, but Voice HUD helps you',
     loading: '加载中...',
     error: '出错了',
     save: '保存',

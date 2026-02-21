@@ -29,18 +29,18 @@ export function AudioRecorder({
   }
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-4">
       {!isRecording && !audioBlob && (
         <>
           <button
             onClick={onStartRecording}
-            className="flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors font-medium"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 font-medium text-white transition-colors hover:bg-slate-700"
           >
             <Mic size={20} />
             {t.analysis.recordButton}
           </button>
 
-          <label className="inline-flex items-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors font-medium cursor-pointer">
+          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium text-slate-700 transition-colors hover:border-slate-400 hover:text-slate-900">
             <Upload size={18} />
             {t.analysis.uploadButton}
             <input
@@ -61,12 +61,12 @@ export function AudioRecorder({
       {isRecording && (
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            <span className="text-red-400 font-mono">{formatDuration(duration)}</span>
+            <div className="h-3 w-3 animate-pulse rounded-full bg-red-500" />
+            <span className="font-mono text-red-600">{formatDuration(duration)}</span>
           </div>
           <button
             onClick={onStopRecording}
-            className="flex items-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors font-medium"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 font-medium text-slate-700 transition-colors hover:border-slate-400 hover:text-slate-900"
           >
             <Square size={16} />
             {t.analysis.stopButton}
@@ -77,11 +77,7 @@ export function AudioRecorder({
       {audioBlob && !isRecording && (
         <div className="flex items-center gap-3">
           <audio src={URL.createObjectURL(audioBlob)} controls className="h-10" />
-          <button
-            onClick={onClear}
-            className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-            title="Delete recording"
-          >
+          <button onClick={onClear} className="p-2 text-slate-400 transition-colors hover:text-red-500" title="Delete recording">
             <Trash2 size={18} />
           </button>
         </div>
@@ -102,7 +98,7 @@ export function AnalyzeButton({ onClick, isAnalyzing, disabled, label }: Analyze
     <button
       onClick={onClick}
       disabled={disabled || isAnalyzing}
-      className="flex items-center gap-2 px-6 py-3 bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors font-medium"
+      className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-6 py-3 font-medium text-white transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
     >
       {isAnalyzing && <Loader2 size={18} className="animate-spin" />}
       {label}

@@ -9,81 +9,60 @@ function HomePage() {
 
   const features = [
     {
-      icon: <AudioWaveform className="w-10 h-10 text-cyan-400" />,
+      icon: <AudioWaveform className="h-8 w-8 text-teal-700" />,
       title: t.home.features.realtime.title,
       description: t.home.features.realtime.desc,
     },
     {
-      icon: <Brain className="w-10 h-10 text-purple-400" />,
+      icon: <Brain className="h-8 w-8 text-slate-800" />,
       title: t.home.features.ai.title,
       description: t.home.features.ai.desc,
     },
     {
-      icon: <BookOpen className="w-10 h-10 text-amber-400" />,
+      icon: <BookOpen className="h-8 w-8 text-emerald-700" />,
       title: t.home.features.training.title,
       description: t.home.features.training.desc,
     },
   ]
 
   return (
-    <div>
-      {/* Hero */}
-      <section className="relative py-20 px-6 text-center overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 via-blue-500/5 to-purple-500/5" />
-        <div className="relative max-w-4xl mx-auto">
-          <div className="flex items-center justify-center gap-3 mb-6">
-            <AudioWaveform size={48} className="text-cyan-400" />
-            <h1 className="text-5xl md:text-6xl font-black tracking-tight">
-              <span className="text-cyan-400">Voice</span>
-              <span className="text-white">HUD</span>
-            </h1>
+    <div className="px-6 pb-14">
+      <section className="mx-auto max-w-5xl py-14">
+        <div className="rounded-3xl border border-slate-200 bg-white p-10 shadow-sm">
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs text-slate-600">
+            <AudioWaveform size={14} className="text-teal-700" /> Voice Hard, but Voice HUD helps you
           </div>
+          <h1 className="text-4xl font-semibold tracking-tight text-slate-900 md:text-5xl">{t.home.hero.title}</h1>
+          <p className="mt-4 max-w-2xl text-base leading-relaxed text-slate-600 md:text-lg">{t.home.hero.subtitle}</p>
 
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
-            {t.home.hero.title}
-          </h2>
-          <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10">
-            {t.home.hero.subtitle}
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <Link
               to="/practice"
-              className="flex items-center gap-2 px-8 py-3.5 bg-cyan-500 hover:bg-cyan-600 text-white font-semibold rounded-xl transition-colors shadow-lg shadow-cyan-500/25"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-3 font-medium text-white transition-colors hover:bg-slate-700"
             >
-              <Mic size={20} />
+              <Mic size={18} />
               {t.home.hero.ctaPractice}
-              <ArrowRight size={18} />
+              <ArrowRight size={16} />
             </Link>
             <Link
-              to="/training"
-              className="flex items-center gap-2 px-8 py-3.5 border border-slate-600 hover:border-slate-500 text-slate-300 hover:text-white rounded-xl transition-colors"
+              to="/analysis"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-6 py-3 font-medium text-slate-700 transition-colors hover:border-slate-400 hover:text-slate-900"
             >
-              <BookOpen size={20} />
-              {t.home.hero.ctaTraining}
+              <Brain size={18} />
+              {t.nav.analysis}
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-16 px-6 max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {features.map((feature, index) => (
-            <div
-              key={index}
-              className="bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:border-cyan-500/30 transition-all duration-300"
-            >
-              <div className="mb-4">{feature.icon}</div>
-              <h3 className="text-lg font-semibold text-white mb-2">
-                {feature.title}
-              </h3>
-              <p className="text-sm text-slate-400 leading-relaxed">
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
+      <section className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-3">
+        {features.map((feature, index) => (
+          <div key={index} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-3">{feature.icon}</div>
+            <h3 className="mb-2 text-base font-semibold text-slate-900">{feature.title}</h3>
+            <p className="text-sm leading-relaxed text-slate-600">{feature.description}</p>
+          </div>
+        ))}
       </section>
     </div>
   )
