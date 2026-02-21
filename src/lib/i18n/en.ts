@@ -35,8 +35,8 @@ export const en = {
         desc: 'Web Audio API-based real-time fundamental frequency detection and resonance analysis — see your voice',
       },
       ai: {
-        title: 'Gemini AI Analysis',
-        desc: 'Powered by Gemini multimodal AI for multi-dimensional voice analysis including timbre, intonation, and resonance',
+        title: 'AI Multimodal Analysis',
+        desc: 'Supports Gemini, OpenRouter, Zenmux, and custom endpoints for multi-dimensional voice analysis including timbre, intonation, and resonance',
       },
       training: {
         title: 'Professional Training Plans',
@@ -71,7 +71,7 @@ export const en = {
     stopButton: 'Stop Recording',
     analyzeButton: 'Analyze',
     result: 'Analysis Result',
-    noApiKey: 'Please enter your Gemini API Key in Settings first',
+    noApiKey: 'Please configure an AI provider in Settings first',
     goToSettings: 'Go to Settings',
   },
   training: {
@@ -96,12 +96,18 @@ export const en = {
   },
   settings: {
     title: 'Settings',
-    apiKey: {
-      title: 'Gemini API Key',
-      desc: 'Enter your Google Gemini API Key to enable AI voice analysis',
-      placeholder: 'Paste your API Key...',
+    provider: {
+      title: 'AI Provider',
+      desc: 'Choose your AI analysis provider and configure the API key',
+      apiKey: 'API Key',
+      apiKeyPlaceholder: 'Paste your API Key...',
+      model: 'Model',
+      modelPlaceholder: 'Enter model name...',
+      baseURL: 'API Endpoint',
+      baseURLPlaceholder: 'Enter API endpoint URL...',
       saved: 'Saved',
-      howToGet: 'How to get an API Key?',
+      howToGet: 'How to get one?',
+      testConnection: 'Test Connection',
     },
     language: {
       title: 'Language',

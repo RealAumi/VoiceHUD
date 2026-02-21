@@ -35,8 +35,8 @@ export const zh = {
         desc: '基于 Web Audio API 的实时基频检测与共振分析，让你看见自己的声音',
       },
       ai: {
-        title: 'Gemini AI 分析',
-        desc: '接入 Gemini 多模态大模型，从音色、语调、共振等多维度智能分析你的声音',
+        title: 'AI 多模态分析',
+        desc: '支持 Gemini、OpenRouter、Zenmux 等多种 AI 接入点，从音色、语调、共振等多维度智能分析你的声音',
       },
       training: {
         title: '专业训练计划',
@@ -71,7 +71,7 @@ export const zh = {
     stopButton: '停止录音',
     analyzeButton: '发送分析',
     result: '分析结果',
-    noApiKey: '请先在设置中填入你的 Gemini API Key',
+    noApiKey: '请先在设置中配置 AI 接入点',
     goToSettings: '前往设置',
   },
   training: {
@@ -96,12 +96,18 @@ export const zh = {
   },
   settings: {
     title: '设置',
-    apiKey: {
-      title: 'Gemini API Key',
-      desc: '输入你的 Google Gemini API Key 以启用 AI 分析功能',
-      placeholder: '粘贴你的 API Key...',
+    provider: {
+      title: 'AI 接入点',
+      desc: '选择 AI 分析服务提供商并配置 API Key',
+      apiKey: 'API Key',
+      apiKeyPlaceholder: '粘贴你的 API Key...',
+      model: '模型',
+      modelPlaceholder: '输入模型名称...',
+      baseURL: 'API 地址',
+      baseURLPlaceholder: '输入 API 端点地址...',
       saved: '已保存',
-      howToGet: '如何获取 API Key？',
+      howToGet: '如何获取？',
+      testConnection: '测试连接',
     },
     language: {
       title: '语言 / Language',
