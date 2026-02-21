@@ -4,6 +4,7 @@ import type { ProviderConfig } from '#/lib/ai/providers'
 const STORAGE_KEYS = {
   locale: 'voicehud-locale',
   provider: 'voicehud-ai-provider',
+  theme: 'voicehud-theme',
 } as const
 
 const DEFAULT_PROVIDER: ProviderConfig = {
@@ -15,10 +16,12 @@ const DEFAULT_PROVIDER: ProviderConfig = {
 }
 
 export type AppLocale = 'zh' | 'en'
+export type AppTheme = 'light' | 'dark' | 'system'
 
 interface AppState {
   locale: AppLocale
   provider: ProviderConfig
+  theme: AppTheme
 }
 
 function loadLocale(): AppLocale {
@@ -47,9 +50,16 @@ function loadProvider(): ProviderConfig {
   }
 }
 
+function loadTheme(): AppTheme {
+  if (typeof window === 'undefined') return 'system'
+  const raw = localStorage.getItem(STORAGE_KEYS.theme)
+  return raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system'
+}
+
 export const appStore = new Store<AppState>({
   locale: loadLocale(),
   provider: loadProvider(),
+  theme: loadTheme(),
 })
 
 export function setLocale(locale: AppLocale) {
@@ -68,6 +78,17 @@ export function setProvider(provider: ProviderConfig) {
 
 export function getLocale(): AppLocale {
   return appStore.state.locale
+}
+
+export function setTheme(theme: AppTheme) {
+  appStore.setState((s) => ({ ...s, theme }))
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEYS.theme, theme)
+  }
+}
+
+export function getTheme(): AppTheme {
+  return appStore.state.theme
 }
 
 export function getProvider(): ProviderConfig {

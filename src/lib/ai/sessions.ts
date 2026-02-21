@@ -38,11 +38,33 @@ export function ensureSessionSchema() {
   if (!isBrowser()) return
   const current = localStorage.getItem(STORAGE.schemaVersion)
   if (current === SCHEMA_VERSION) return
-  localStorage.setItem(STORAGE.schemaVersion, SCHEMA_VERSION)
+  migrateOrResetSessions()
 }
 
 function messageKey(sessionId: string) {
   return `voicehud:messages:${sessionId}`
+}
+
+function migrateOrResetSessions() {
+  try {
+    const rawSessions = localStorage.getItem(STORAGE.sessions)
+    if (rawSessions) {
+      const sessions = JSON.parse(rawSessions) as AnalysisSession[]
+      if (Array.isArray(sessions)) {
+        for (const session of sessions) {
+          if (session && typeof session.id === 'string') {
+            localStorage.removeItem(messageKey(session.id))
+          }
+        }
+      }
+    }
+  } catch {
+    // ignore parse errors and clear top-level keys below
+  }
+
+  localStorage.removeItem(STORAGE.sessions)
+  localStorage.removeItem(STORAGE.activeSessionId)
+  localStorage.setItem(STORAGE.schemaVersion, SCHEMA_VERSION)
 }
 
 export function listSessions(): AnalysisSession[] {

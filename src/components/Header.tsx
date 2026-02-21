@@ -31,8 +31,8 @@ export default function Header() {
               <AudioWaveform size={22} className="text-teal-700" />
               <div className="leading-tight">
                 <p className="text-base font-semibold tracking-tight text-slate-900">VoiceHUD</p>
-                <p className="hidden text-[11px] text-slate-500 md:block">
-                  Voice Hard, but Voice HUD helps you
+                <p className="hidden text-[11px] text-slate-500 md:block dark:text-slate-400">
+                  {t.common.appTagline}
                 </p>
               </div>
             </Link>
