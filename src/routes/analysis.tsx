@@ -42,6 +42,7 @@ function AnalysisPage() {
       <h1 className="text-2xl font-bold">{t.analysis.title}</h1>
 
       <p className="text-slate-400">{t.analysis.recordPrompt}</p>
+      <p className="text-xs text-slate-500">{t.analysis.securityNotice}</p>
 
       {/* Provider not configured warning */}
       {!configured && (
@@ -66,6 +67,7 @@ function AnalysisPage() {
         audioBlob={recorder.audioBlob}
         onStartRecording={recorder.startRecording}
         onStopRecording={recorder.stopRecording}
+        onUpload={recorder.loadAudioFile}
         onClear={recorder.clearRecording}
       />
 

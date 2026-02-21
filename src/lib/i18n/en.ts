@@ -65,11 +65,15 @@ export const en = {
   analysis: {
     title: 'AI Voice Analysis',
     recordPrompt: 'Record a voice clip and let AI analyze your voice characteristics',
+    securityNotice:
+      'Security note: requests are sent through the server over HTTPS, and your API key is used only for that request (not stored server-side).',
     recording: 'Recording...',
     analyzing: 'Analyzing...',
     recordButton: 'Start Recording',
     stopButton: 'Stop Recording',
     analyzeButton: 'Analyze',
+    uploadButton: 'Upload Audio',
+    uploadInputLabel: 'Upload audio file',
     result: 'Analysis Result',
     noApiKey: 'Please configure an AI provider in Settings first',
     goToSettings: 'Go to Settings',
@@ -99,12 +103,15 @@ export const en = {
     provider: {
       title: 'AI Provider',
       desc: 'Choose your AI analysis provider and configure the API key',
+      securityNotice:
+        'Security: your API key is only sent with each HTTPS request and is not persisted on the server.',
       apiKey: 'API Key',
       apiKeyPlaceholder: 'Paste your API Key...',
       model: 'Model',
       modelPlaceholder: 'Enter model name...',
       baseURL: 'API Endpoint',
       baseURLPlaceholder: 'Enter API endpoint URL...',
+      httpsOnlyNotice: 'Use HTTPS endpoints only (https://...) for secure transport.',
       saved: 'Saved',
       howToGet: 'How to get one?',
       testConnection: 'Test Connection',
