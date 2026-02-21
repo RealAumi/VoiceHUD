@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import { HeadContent, Scripts, createRootRoute, Outlet } from '@tanstack/react-router'
 import { useStore } from '@tanstack/react-store'
 
@@ -35,6 +35,14 @@ function RootComponent() {
 
 function RootDocument({ children }: { children: ReactNode }) {
   const locale = useStore(appStore, (s) => s.locale as Locale)
+  const theme = useStore(appStore, (s) => s.theme)
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const resolvedDark = theme === 'dark' || (theme === 'system' && prefersDark)
+    document.documentElement.classList.toggle('dark', resolvedDark)
+  }, [theme])
 
   const handleSetLocale = (newLocale: Locale) => {
     setLocale(newLocale)
@@ -48,8 +56,8 @@ function RootDocument({ children }: { children: ReactNode }) {
         <head>
           <HeadContent />
         </head>
-        <body className="dark">
-          <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+        <body>
+          <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f7faf9,white_40%,#f5f7f8_100%)] text-slate-900 dark:bg-[radial-gradient(circle_at_top,#111827,#020617_45%,#020617)] dark:text-slate-100">
             <Header />
             <main>{children}</main>
           </div>

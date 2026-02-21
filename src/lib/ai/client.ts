@@ -81,10 +81,16 @@ export async function testProviderConnection(
   }
 }
 
+export interface ConversationTurn {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 export async function analyzeVoice(
   audioBlob: Blob,
   config: ProviderConfig,
-  locale: 'zh' | 'en' = 'zh'
+  locale: 'zh' | 'en' = 'zh',
+  conversation: ConversationTurn[] = []
 ): Promise<AnalysisResult> {
   if (!config.apiKey.trim()) {
     return {
@@ -115,6 +121,7 @@ export async function analyzeVoice(
         baseURL: config.baseURL,
         fallbackBaseURLs: config.fallbackBaseURLs,
         locale,
+        conversation,
         audio: {
           base64: audioBase64,
           mediaType,

@@ -7,9 +7,16 @@ interface PitchDisplayProps {
   pitchHistory: (number | null)[]
   targetRange: PitchRangeKey
   voiced: boolean
+  heightClassName?: string
 }
 
-export function PitchDisplay({ pitch, pitchHistory, targetRange, voiced }: PitchDisplayProps) {
+export function PitchDisplay({
+  pitch,
+  pitchHistory,
+  targetRange,
+  voiced,
+  heightClassName = 'h-48 lg:h-64',
+}: PitchDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const range = PITCH_RANGES[targetRange]
 
@@ -29,19 +36,16 @@ export function PitchDisplay({ pitch, pitchHistory, targetRange, voiced }: Pitch
     const w = rect.width
     const h = rect.height
 
-    // Clear
-    ctx.fillStyle = '#0f172a'
+    ctx.fillStyle = '#0b1220'
     ctx.fillRect(0, 0, w, h)
 
-    // Draw target range
     const minY = h - ((range.min - 50) / 550) * h
     const maxY = h - ((range.max - 50) / 550) * h
 
-    ctx.fillStyle = 'rgba(34, 211, 238, 0.08)'
+    ctx.fillStyle = 'rgba(20, 184, 166, 0.12)'
     ctx.fillRect(0, maxY, w, minY - maxY)
 
-    // Range labels
-    ctx.strokeStyle = 'rgba(34, 211, 238, 0.3)'
+    ctx.strokeStyle = 'rgba(20, 184, 166, 0.35)'
     ctx.setLineDash([4, 4])
     ctx.beginPath()
     ctx.moveTo(0, minY)
@@ -51,15 +55,14 @@ export function PitchDisplay({ pitch, pitchHistory, targetRange, voiced }: Pitch
     ctx.stroke()
     ctx.setLineDash([])
 
-    ctx.fillStyle = 'rgba(34, 211, 238, 0.6)'
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.9)'
     ctx.font = '11px sans-serif'
-    ctx.fillText(`${range.min} Hz`, 4, minY - 4)
-    ctx.fillText(`${range.max} Hz`, 4, maxY + 14)
+    ctx.fillText(`${range.min} Hz`, 6, minY - 4)
+    ctx.fillText(`${range.max} Hz`, 6, maxY + 14)
 
-    // Draw pitch history line
     if (pitchHistory.length > 1) {
       ctx.beginPath()
-      ctx.strokeStyle = '#22d3ee'
+      ctx.strokeStyle = '#2dd4bf'
       ctx.lineWidth = 2
       ctx.lineJoin = 'round'
 
@@ -81,26 +84,24 @@ export function PitchDisplay({ pitch, pitchHistory, targetRange, voiced }: Pitch
       }
       ctx.stroke()
 
-      // Draw glow effect for the latest point
       if (pitch !== null) {
         const x = w
         const y = h - ((pitch - 50) / 550) * h
         const inRange = pitch >= range.min && pitch <= range.max
 
         ctx.beginPath()
-        ctx.arc(x - 2, y, 6, 0, Math.PI * 2)
-        ctx.fillStyle = inRange ? 'rgba(34, 211, 238, 0.4)' : 'rgba(251, 146, 60, 0.4)'
+        ctx.arc(x - 2, y, 7, 0, Math.PI * 2)
+        ctx.fillStyle = inRange ? 'rgba(45, 212, 191, 0.35)' : 'rgba(251, 146, 60, 0.35)'
         ctx.fill()
 
         ctx.beginPath()
-        ctx.arc(x - 2, y, 3, 0, Math.PI * 2)
-        ctx.fillStyle = inRange ? '#22d3ee' : '#fb923c'
+        ctx.arc(x - 2, y, 3.5, 0, Math.PI * 2)
+        ctx.fillStyle = inRange ? '#2dd4bf' : '#fb923c'
         ctx.fill()
       }
     }
 
-    // Draw grid lines
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)'
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)'
     ctx.lineWidth = 1
     for (let freq = 100; freq <= 500; freq += 50) {
       const y = h - ((freq - 50) / 550) * h
@@ -110,40 +111,32 @@ export function PitchDisplay({ pitch, pitchHistory, targetRange, voiced }: Pitch
       ctx.stroke()
 
       if (freq % 100 === 0) {
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.3)'
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.4)'
         ctx.font = '10px sans-serif'
         ctx.textAlign = 'right'
-        ctx.fillText(`${freq}`, w - 4, y - 3)
+        ctx.fillText(`${freq}`, w - 6, y - 3)
         ctx.textAlign = 'left'
       }
     }
   }, [pitch, pitchHistory, range])
 
   return (
-    <div className="rounded-xl bg-slate-900 border border-slate-700 p-4">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-slate-300">Pitch (F0)</h3>
+    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Pitch (F0)</h3>
         <div className="text-right">
           {voiced && pitch !== null ? (
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-mono font-bold text-cyan-400">
-                {Math.round(pitch)}
-              </span>
-              <span className="text-xs text-slate-400">Hz</span>
-              <span className="text-sm text-slate-500 font-mono">
-                {frequencyToNote(pitch)}
-              </span>
+              <span className="font-mono text-2xl font-bold text-teal-700 dark:text-teal-300">{Math.round(pitch)}</span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">Hz</span>
+              <span className="font-mono text-sm text-slate-500 dark:text-slate-400">{frequencyToNote(pitch)}</span>
             </div>
           ) : (
-            <span className="text-sm text-slate-500">--</span>
+            <span className="text-sm text-slate-500 dark:text-slate-400">--</span>
           )}
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        className="w-full h-40 rounded-lg"
-        style={{ imageRendering: 'pixelated' }}
-      />
+      <canvas ref={canvasRef} className={`w-full rounded-lg ${heightClassName}`} style={{ imageRendering: 'pixelated' }} />
     </div>
   )
 }
