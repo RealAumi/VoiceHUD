@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { HeadContent, Scripts, createRootRoute, Outlet } from '@tanstack/react-router'
+import { useStore } from '@tanstack/react-store'
 
 import Header from '../components/Header'
-import { I18nContext, getStoredLocale, setStoredLocale, getTranslations, type Locale } from '../lib/i18n'
+import { I18nContext, getTranslations, type Locale } from '../lib/i18n'
+import { appStore, setLocale } from '#/lib/store/app-store'
 
 import appCss from '../styles.css?url'
 
@@ -32,11 +34,10 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(getStoredLocale)
+  const locale = useStore(appStore, (s) => s.locale as Locale)
 
   const handleSetLocale = (newLocale: Locale) => {
-    setLocaleState(newLocale)
-    setStoredLocale(newLocale)
+    setLocale(newLocale)
   }
 
   const t = getTranslations(locale)
