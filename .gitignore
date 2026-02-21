@@ -137,3 +137,15 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# TanStack Start / Nitro / Vinxi
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+dist-ssr
+
+# macOS
+.DS_Store
