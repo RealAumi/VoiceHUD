@@ -35,7 +35,7 @@ export function VoiceHUD({ data, targetRange, isActive }: VoiceHUDProps) {
             pitchHistory={data.pitchHistory}
             targetRange={targetRange}
             voiced={data.voiced}
-            heightClassName="h-56 lg:h-[26rem]"
+            heightClassName="h-56 lg:h-[28rem] xl:h-[32rem]"
           />
         </div>
 
