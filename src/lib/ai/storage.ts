@@ -5,7 +5,7 @@ const STORAGE_KEY = 'voicehud-ai-provider'
 const DEFAULT_CONFIG: ProviderConfig = {
   id: 'google',
   apiKey: '',
-  model: 'gemini-2.5-flash',
+  model: 'gemini-3-flash',
   baseURL: '',
 }
 
