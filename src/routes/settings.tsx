@@ -1,30 +1,24 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Check, ExternalLink } from 'lucide-react'
+import { useStore } from '@tanstack/react-store'
 import { useI18n } from '#/lib/i18n'
 import { PROVIDER_PRESETS, getPreset, type ProviderPreset } from '#/lib/ai/providers'
-import { getStoredProvider, setStoredProvider } from '#/lib/ai/storage'
+import { setStoredProvider } from '#/lib/ai/storage'
 import { testProviderConnection } from '#/lib/ai/client'
 import type { ProviderConfig } from '#/lib/ai/providers'
+import { appStore } from '#/lib/store/app-store'
 
 export const Route = createFileRoute('/settings')({ component: SettingsPage })
 
 function SettingsPage() {
   const { t, locale, setLocale } = useI18n()
-  const [config, setConfig] = useState<ProviderConfig>({
-    id: 'google',
-    apiKey: '',
-    model: 'gemini-3-flash',
-    baseURL: '',
-  })
+  const storedProvider = useStore(appStore, (s) => s.provider)
+  const [config, setConfig] = useState<ProviderConfig>(storedProvider)
   const [saved, setSaved] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
   const [testMessage, setTestMessage] = useState<string>('')
   const [testOk, setTestOk] = useState<boolean | null>(null)
-
-  useEffect(() => {
-    setConfig(getStoredProvider())
-  }, [])
 
   const preset = getPreset(config.id)
   const resolvedBaseURL = preset?.customBaseURL ? config.baseURL : (preset?.defaultBaseURL ?? '')
@@ -37,6 +31,7 @@ function SettingsPage() {
       id: presetId,
       model: prev.id === presetId ? prev.model : p.defaultModel,
       baseURL: prev.id === presetId ? prev.baseURL : p.defaultBaseURL,
+      fallbackBaseURLs: prev.id === presetId ? prev.fallbackBaseURLs : p.endpointCandidates?.slice(1) ?? [],
     }))
     setSaved(false)
     setTestMessage('')
@@ -44,7 +39,14 @@ function SettingsPage() {
   }
 
   const handleSave = () => {
-    setStoredProvider({ ...config, baseURL: resolvedBaseURL })
+    setStoredProvider({
+      ...config,
+      baseURL: resolvedBaseURL,
+      fallbackBaseURLs: config.fallbackBaseURLs
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .filter((v) => v !== resolvedBaseURL),
+    })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -58,16 +60,7 @@ function SettingsPage() {
     setIsTesting(false)
   }
 
-  const apiKeyLinks: Record<string, string> = {
-    google: 'https://aistudio.google.com/apikey',
-    openrouter: 'https://openrouter.ai/settings/keys',
-    zenmux: 'https://dash.zenmux.top',
-  }
-
-  const endpointOptions: Record<string, string[]> = {
-    openrouter: ['https://openrouter.ai/api/v1'],
-    zenmux: ['https://api.zenmux.top/v1', 'https://api2.zenmux.top/v1', 'https://api3.zenmux.top/v1'],
-  }
+  const fallbackText = config.fallbackBaseURLs.join('\n')
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
@@ -135,9 +128,9 @@ function SettingsPage() {
             placeholder={t.settings.provider.apiKeyPlaceholder}
             className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500"
           />
-          {apiKeyLinks[config.id] && (
+          {preset?.apiKeyUrl && (
             <a
-              href={apiKeyLinks[config.id]}
+              href={preset.apiKeyUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
@@ -178,32 +171,55 @@ function SettingsPage() {
             placeholder={t.settings.provider.baseURLPlaceholder}
             className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500 read-only:opacity-70"
           />
-          {endpointOptions[config.id] && preset?.customBaseURL && (
+
+          {preset?.endpointCandidates && preset.customBaseURL && (
             <div className="flex flex-wrap gap-2 pt-1">
-              {endpointOptions[config.id].map((endpoint) => (
+              {preset.endpointCandidates.map((endpoint, idx) => (
                 <button
                   key={endpoint}
                   type="button"
                   onClick={() => {
-                    setConfig((prev) => ({ ...prev, baseURL: endpoint }))
+                    if (idx === 0) {
+                      setConfig((prev) => ({ ...prev, baseURL: endpoint }))
+                    } else {
+                      setConfig((prev) => {
+                        const next = new Set(prev.fallbackBaseURLs)
+                        next.add(endpoint)
+                        return { ...prev, fallbackBaseURLs: Array.from(next) }
+                      })
+                    }
                     setSaved(false)
                     setTestMessage('')
                   }}
-                  className={`px-2.5 py-1 rounded-md border text-xs transition-colors ${
-                    resolvedBaseURL === endpoint
-                      ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-300'
-                      : 'bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500'
-                  }`}
+                  className="px-2.5 py-1 rounded-md border text-xs transition-colors bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500"
                 >
-                  {endpoint}
+                  {idx === 0 ? `Primary: ${endpoint}` : `Fallback: ${endpoint}`}
                 </button>
               ))}
             </div>
           )}
-          {!preset?.customBaseURL && resolvedBaseURL && (
-            <p className="text-xs text-emerald-400">
-              {locale === 'zh' ? '已使用官方推荐端点。' : 'Using the official recommended endpoint.'}
-            </p>
+
+          {preset?.customBaseURL && (
+            <>
+              <label className="block pt-3 text-xs text-slate-400">
+                {locale === 'zh' ? '备用端点（每行一个，按顺序尝试）' : 'Fallback endpoints (one per line, tried in order)'}
+              </label>
+              <textarea
+                value={fallbackText}
+                onChange={(e) => {
+                  const lines = e.target.value
+                    .split('\n')
+                    .map((v) => v.trim())
+                    .filter(Boolean)
+                  setConfig((prev) => ({ ...prev, fallbackBaseURLs: lines }))
+                  setSaved(false)
+                  setTestMessage('')
+                }}
+                rows={3}
+                placeholder="https://api2.example.com/v1"
+                className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+              />
+            </>
           )}
         </div>
 

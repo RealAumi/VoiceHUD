@@ -1,10 +1,5 @@
 /**
  * AI provider configuration and presets.
- *
- * Supports:
- * - Google Gemini (native via @ai-sdk/google)
- * - OpenRouter (via @openrouter/ai-sdk-provider)
- * - Any OpenAI-compatible endpoint (Zenmux, custom, etc.)
  */
 
 export type ProviderType = 'google' | 'openrouter' | 'openai-compatible'
@@ -13,8 +8,10 @@ export interface ProviderConfig {
   id: string
   apiKey: string
   model: string
-  /** Only used for openai-compatible providers */
+  /** Primary endpoint for OpenAI-compatible providers */
   baseURL: string
+  /** Optional fallback endpoints (tried in order if primary fails) */
+  fallbackBaseURLs: string[]
 }
 
 export interface ProviderPreset {
@@ -28,6 +25,8 @@ export interface ProviderPreset {
   customBaseURL: boolean
   /** Placeholder suggestions for model names */
   modelHint: string
+  apiKeyUrl?: string
+  endpointCandidates?: string[]
 }
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
@@ -43,6 +42,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     defaultModel: 'gemini-3-flash',
     customBaseURL: false,
     modelHint: 'gemini-3-flash, gemini-3-pro ...',
+    apiKeyUrl: 'https://aistudio.google.com/apikey',
   },
   {
     id: 'openrouter',
@@ -56,19 +56,25 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     defaultModel: 'google/gemini-3-flash',
     customBaseURL: false,
     modelHint: 'google/gemini-3-flash, openai/gpt-4.1-mini ...',
+    apiKeyUrl: 'https://openrouter.ai/settings/keys',
+    endpointCandidates: ['https://openrouter.ai/api/v1'],
   },
   {
     id: 'zenmux',
     type: 'openai-compatible',
     name: { zh: 'Zenmux', en: 'Zenmux' },
     description: {
-      zh: 'Zenmux API 代理服务，OpenAI 兼容接口',
-      en: 'Zenmux API proxy service, OpenAI-compatible interface',
+      zh: 'Zenmux OpenAI 兼容网关（支持多端点容灾）',
+      en: 'Zenmux OpenAI-compatible gateway (multi-endpoint fallback)',
     },
-    defaultBaseURL: 'https://api.zenmux.top/v1',
+    defaultBaseURL: 'https://zenmux.ai/api/v1',
     defaultModel: 'gemini-3-flash',
     customBaseURL: true,
     modelHint: 'gemini-3-flash, gemini-3-pro, gpt-4.1-mini ...',
+    apiKeyUrl: 'https://dash.zenmux.top',
+    endpointCandidates: [
+      'https://zenmux.ai/api/v1',
+    ],
   },
   {
     id: 'custom',
@@ -81,7 +87,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     defaultBaseURL: '',
     defaultModel: '',
     customBaseURL: true,
-    modelHint: 'https://your-api.example.com/v1',
+    modelHint: 'gpt-4.1-mini, gemini-3-flash, claude-3.7-sonnet ...',
   },
 ]
 

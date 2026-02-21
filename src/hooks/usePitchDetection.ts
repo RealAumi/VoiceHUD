@@ -28,10 +28,20 @@ const INITIAL_DATA: PitchData = {
   spectrumData: new Uint8Array(0),
 }
 
+const UPDATE_INTERVAL_MS = 240
+const HOLD_LAST_VALUE_MS = 340
+
 export function usePitchDetection(processor: AudioProcessor | null) {
   const [data, setData] = useState<PitchData>(INITIAL_DATA)
   const animFrameRef = useRef<number>(0)
   const historyRef = useRef<(number | null)[]>([])
+  const lastEmitAtRef = useRef<number>(0)
+  const lastVoicedAtRef = useRef<number>(0)
+  const lastVoicedSnapshotRef = useRef<Pick<PitchData, 'pitch' | 'formants' | 'spectrumData'>>({
+    pitch: null,
+    formants: { F1: null, F2: null, F3: null },
+    spectrumData: new Uint8Array(0),
+  })
 
   const tick = useCallback(() => {
     if (!processor?.isActive) return
@@ -45,14 +55,39 @@ export function usePitchDetection(processor: AudioProcessor | null) {
       return
     }
 
+    const now = performance.now()
+    if (now - lastEmitAtRef.current < UPDATE_INTERVAL_MS) {
+      animFrameRef.current = requestAnimationFrame(tick)
+      return
+    }
+    lastEmitAtRef.current = now
+
     const rms = calculateRMS(timeDomain)
-    const voiced = isVoiced(timeDomain)
-    const pitch = voiced ? detectPitchYIN(timeDomain, processor.sampleRate) : null
-    const formants = voiced
+    const detectedVoiced = isVoiced(timeDomain)
+    const detectedPitch = detectedVoiced ? detectPitchYIN(timeDomain, processor.sampleRate) : null
+    const detectedFormants = detectedVoiced
       ? detectFormants(freqData, processor.sampleRate, processor.fftSize)
       : { F1: null, F2: null, F3: null }
 
-    // Update pitch history
+    if (detectedVoiced && detectedPitch !== null) {
+      lastVoicedAtRef.current = now
+      lastVoicedSnapshotRef.current = {
+        pitch: detectedPitch,
+        formants: detectedFormants,
+        spectrumData: byteFreq,
+      }
+    }
+
+    const withinHold = now - lastVoicedAtRef.current <= HOLD_LAST_VALUE_MS
+    const pitch = detectedVoiced ? detectedPitch : withinHold ? lastVoicedSnapshotRef.current.pitch : null
+    const formants = detectedVoiced
+      ? detectedFormants
+      : withinHold
+        ? lastVoicedSnapshotRef.current.formants
+        : { F1: null, F2: null, F3: null }
+    const voiced = detectedVoiced || withinHold
+    const spectrumData = detectedVoiced ? byteFreq : withinHold ? lastVoicedSnapshotRef.current.spectrumData : byteFreq
+
     historyRef.current.push(pitch)
     if (historyRef.current.length > VIS.PITCH_HISTORY_LENGTH) {
       historyRef.current.shift()
@@ -64,7 +99,7 @@ export function usePitchDetection(processor: AudioProcessor | null) {
       voiced,
       formants,
       pitchHistory: [...historyRef.current],
-      spectrumData: byteFreq,
+      spectrumData,
     })
 
     animFrameRef.current = requestAnimationFrame(tick)
@@ -72,7 +107,7 @@ export function usePitchDetection(processor: AudioProcessor | null) {
 
   useEffect(() => {
     if (processor?.isActive) {
-      historyRef.current = []
+      lastEmitAtRef.current = 0
       animFrameRef.current = requestAnimationFrame(tick)
     }
 
@@ -85,6 +120,13 @@ export function usePitchDetection(processor: AudioProcessor | null) {
 
   const reset = useCallback(() => {
     historyRef.current = []
+    lastVoicedAtRef.current = 0
+    lastEmitAtRef.current = 0
+    lastVoicedSnapshotRef.current = {
+      pitch: null,
+      formants: { F1: null, F2: null, F3: null },
+      spectrumData: new Uint8Array(0),
+    }
     setData(INITIAL_DATA)
   }, [])
 

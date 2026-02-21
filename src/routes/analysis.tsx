@@ -1,22 +1,24 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { AlertCircle, KeyRound } from 'lucide-react'
+import { useStore } from '@tanstack/react-store'
 import { useI18n } from '#/lib/i18n'
 import { useVoiceRecorder } from '#/hooks/useVoiceRecorder'
 import { AudioRecorder, AnalyzeButton } from '#/components/audio/AudioRecorder'
 import { analyzeVoice } from '#/lib/ai/client'
-import { getStoredProvider, isProviderConfigured } from '#/lib/ai/storage'
+import { appStore } from '#/lib/store/app-store'
 
 export const Route = createFileRoute('/analysis')({ component: AnalysisPage })
 
 function AnalysisPage() {
   const { t, locale } = useI18n()
   const recorder = useVoiceRecorder()
+  const config = useStore(appStore, (s) => s.provider)
   const [analysisResult, setAnalysisResult] = useState<string>('')
   const [analysisError, setAnalysisError] = useState<string>('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  const configured = typeof window !== 'undefined' ? isProviderConfigured() : false
+  const configured = config.apiKey.trim().length > 0
 
   const handleAnalyze = async () => {
     if (!recorder.audioBlob) return
@@ -25,7 +27,6 @@ function AnalysisPage() {
     setAnalysisResult('')
     setAnalysisError('')
 
-    const config = getStoredProvider()
     const result = await analyzeVoice(recorder.audioBlob, config, locale)
 
     if (result.error) {
