@@ -1,19 +1,20 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
-import { Check, ExternalLink } from 'lucide-react'
+import { type ReactNode, useEffect, useState } from 'react'
+import { Check, ExternalLink, Moon, Monitor, Sun } from 'lucide-react'
 import { useStore } from '@tanstack/react-store'
 import { useI18n } from '#/lib/i18n'
 import { PROVIDER_PRESETS, getPreset, type ProviderPreset } from '#/lib/ai/providers'
 import { setStoredProvider } from '#/lib/ai/storage'
 import { testProviderConnection } from '#/lib/ai/client'
 import type { ProviderConfig } from '#/lib/ai/providers'
-import { appStore } from '#/lib/store/app-store'
+import { appStore, setTheme, type AppTheme } from '#/lib/store/app-store'
 
 export const Route = createFileRoute('/settings')({ component: SettingsPage })
 
 function SettingsPage() {
   const { t, locale, setLocale } = useI18n()
   const storedProvider = useStore(appStore, (s) => s.provider)
+  const theme = useStore(appStore, (s) => s.theme)
   const [config, setConfig] = useState<ProviderConfig>(storedProvider)
   const [saved, setSaved] = useState(false)
 
@@ -66,29 +67,35 @@ function SettingsPage() {
 
   const fallbackText = config.fallbackBaseURLs.join('\n')
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-8">
-      <h1 className="text-2xl font-bold">{t.settings.title}</h1>
+  const themeOptions: Array<{ key: AppTheme; icon: ReactNode; label: string }> = [
+    { key: 'light', icon: <Sun size={14} />, label: locale === 'zh' ? '浅色' : 'Light' },
+    { key: 'dark', icon: <Moon size={14} />, label: locale === 'zh' ? '深色' : 'Dark' },
+    { key: 'system', icon: <Monitor size={14} />, label: locale === 'zh' ? '跟随系统' : 'System' },
+  ]
 
-      <section className="rounded-xl bg-slate-800/60 border border-slate-700 p-5 space-y-3">
-        <h2 className="font-semibold text-white">{t.settings.language.title}</h2>
-        <div className="flex gap-3">
+  return (
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+      <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t.settings.title}</h1>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+        <h2 className="font-semibold text-slate-900 dark:text-slate-100">{t.settings.language.title}</h2>
+        <div className="mt-3 flex gap-3">
           <button
             onClick={() => setLocale('zh')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
               locale === 'zh'
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-500'
+                ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+                : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
             }`}
           >
             {t.settings.language.zh}
           </button>
           <button
             onClick={() => setLocale('en')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
               locale === 'en'
-                ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                : 'bg-slate-800 text-slate-400 border border-slate-700 hover:border-slate-500'
+                ? 'border-slate-900 bg-slate-900 text-white dark:border-slate-100 dark:bg-slate-100 dark:text-slate-900'
+                : 'border-slate-300 bg-white text-slate-700 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
             }`}
           >
             {t.settings.language.en}
@@ -96,31 +103,51 @@ function SettingsPage() {
         </div>
       </section>
 
-      <section className="rounded-xl bg-slate-800/60 border border-slate-700 p-5 space-y-5">
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+        <h2 className="font-semibold text-slate-900 dark:text-slate-100">{locale === 'zh' ? '外观主题' : 'Appearance'}</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {themeOptions.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setTheme(opt.key)}
+              className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${
+                theme === opt.key
+                  ? 'border-teal-700 bg-teal-50 text-teal-700 dark:border-teal-400/60 dark:bg-teal-400/10 dark:text-teal-300'
+                  : 'border-slate-300 bg-white text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300'
+              }`}
+            >
+              {opt.icon}
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
         <div>
-          <h2 className="font-semibold text-white">{t.settings.provider.title}</h2>
-          <p className="text-sm text-slate-400 mt-1">{t.settings.provider.desc}</p>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-100">{t.settings.provider.title}</h2>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t.settings.provider.desc}</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
+        <div className="mt-4 grid grid-cols-2 gap-2">
           {PROVIDER_PRESETS.map((p: ProviderPreset) => (
             <button
               key={p.id}
               onClick={() => handleSelectProvider(p.id)}
-              className={`text-left p-3 rounded-lg border transition-all ${
+              className={`rounded-lg border p-3 text-left transition-all ${
                 config.id === p.id
-                  ? 'border-cyan-500/50 bg-cyan-500/10'
-                  : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'
+                  ? 'border-teal-500/60 bg-teal-50 dark:bg-teal-500/10'
+                  : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900'
               }`}
             >
-              <div className="font-medium text-sm text-white">{p.name[locale]}</div>
-              <div className="text-xs text-slate-400 mt-0.5 line-clamp-1">{p.description[locale]}</div>
+              <div className="text-sm font-medium text-slate-900 dark:text-slate-100">{p.name[locale]}</div>
+              <div className="mt-0.5 line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{p.description[locale]}</div>
             </button>
           ))}
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-sm text-slate-300 font-medium">{t.settings.provider.apiKey}</label>
+        <div className="mt-4 space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.settings.provider.apiKey}</label>
           <input
             type="password"
             value={config.apiKey}
@@ -130,24 +157,19 @@ function SettingsPage() {
               setTestMessage('')
             }}
             placeholder={t.settings.provider.apiKeyPlaceholder}
-            className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500">{t.settings.provider.securityNotice}</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t.settings.provider.securityNotice}</p>
           {preset?.apiKeyUrl && (
-            <a
-              href={preset.apiKeyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 transition-colors"
-            >
+            <a href={preset.apiKeyUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs text-teal-700 hover:text-teal-600 dark:text-teal-300 dark:hover:text-teal-200">
               {t.settings.provider.howToGet}
               <ExternalLink size={12} />
             </a>
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-sm text-slate-300 font-medium">{t.settings.provider.model}</label>
+        <div className="mt-4 space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.settings.provider.model}</label>
           <input
             type="text"
             value={config.model}
@@ -157,13 +179,13 @@ function SettingsPage() {
               setTestMessage('')
             }}
             placeholder={t.settings.provider.modelPlaceholder}
-            className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
-          {preset && <p className="text-xs text-slate-500">{preset.modelHint}</p>}
+          {preset && <p className="text-xs text-slate-500 dark:text-slate-400">{preset.modelHint}</p>}
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-sm text-slate-300 font-medium">{t.settings.provider.baseURL}</label>
+        <div className="mt-4 space-y-1.5">
+          <label className="text-sm font-medium text-slate-700 dark:text-slate-300">{t.settings.provider.baseURL}</label>
           <input
             type="url"
             value={resolvedBaseURL}
@@ -174,66 +196,33 @@ function SettingsPage() {
             }}
             readOnly={!preset?.customBaseURL}
             placeholder={t.settings.provider.baseURLPlaceholder}
-            className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500 read-only:opacity-70"
+            className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none read-only:opacity-70 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
-          <p className="text-xs text-slate-500">{t.settings.provider.httpsOnlyNotice}</p>
-
-          {preset?.endpointCandidates && preset.customBaseURL && (
-            <div className="flex flex-wrap gap-2 pt-1">
-              {preset.endpointCandidates.map((endpoint, idx) => (
-                <button
-                  key={endpoint}
-                  type="button"
-                  onClick={() => {
-                    if (idx === 0) {
-                      setConfig((prev) => ({ ...prev, baseURL: endpoint }))
-                    } else {
-                      setConfig((prev) => {
-                        const next = new Set(prev.fallbackBaseURLs)
-                        next.add(endpoint)
-                        return { ...prev, fallbackBaseURLs: Array.from(next) }
-                      })
-                    }
-                    setSaved(false)
-                    setTestMessage('')
-                  }}
-                  className="px-2.5 py-1 rounded-md border text-xs transition-colors bg-slate-800 border-slate-700 text-slate-300 hover:border-slate-500"
-                >
-                  {idx === 0 ? `Primary: ${endpoint}` : `Fallback: ${endpoint}`}
-                </button>
-              ))}
-            </div>
-          )}
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t.settings.provider.httpsOnlyNotice}</p>
 
           {preset?.customBaseURL && (
             <>
-              <label className="block pt-3 text-xs text-slate-400">
+              <label className="block pt-2 text-xs text-slate-500 dark:text-slate-400">
                 {locale === 'zh' ? '备用端点（每行一个，按顺序尝试）' : 'Fallback endpoints (one per line, tried in order)'}
               </label>
               <textarea
                 value={fallbackText}
                 onChange={(e) => {
-                  const lines = e.target.value
-                    .split('\n')
-                    .map((v) => v.trim())
-                    .filter(Boolean)
+                  const lines = e.target.value.split('\n').map((v) => v.trim()).filter(Boolean)
                   setConfig((prev) => ({ ...prev, fallbackBaseURLs: lines }))
                   setSaved(false)
                   setTestMessage('')
                 }}
                 rows={3}
                 placeholder="https://api2.example.com/v1"
-                className="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-600 focus:outline-none focus:border-cyan-500"
+                className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-teal-600 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               />
             </>
           )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg text-sm font-medium transition-colors"
-          >
+        <div className="mt-5 flex flex-wrap gap-2">
+          <button onClick={handleSave} className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200">
             {saved ? (
               <>
                 <Check size={16} />
@@ -246,24 +235,14 @@ function SettingsPage() {
           <button
             onClick={handleTestConnection}
             disabled={isTesting}
-            className="px-5 py-2.5 bg-slate-700 hover:bg-slate-600 disabled:opacity-60 text-white rounded-lg text-sm font-medium transition-colors"
+            className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
           >
-            {isTesting
-              ? locale === 'zh'
-                ? '测试中...'
-                : 'Testing...'
-              : t.settings.provider.testConnection}
+            {isTesting ? (locale === 'zh' ? '测试中...' : 'Testing...') : t.settings.provider.testConnection}
           </button>
         </div>
 
         {testMessage && (
-          <div
-            className={`p-3 rounded-lg border text-sm ${
-              testOk
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                : 'bg-red-500/10 border-red-500/30 text-red-300'
-            }`}
-          >
+          <div className={`mt-3 rounded-lg border p-3 text-sm ${testOk ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-red-300 bg-red-50 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'}`}>
             {testMessage}
           </div>
         )}

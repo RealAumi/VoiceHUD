@@ -1,7 +1,7 @@
 export const en = {
   common: {
     appName: 'VoiceHUD',
-    appTagline: 'Your Intelligent Voice Training Assistant',
+    appTagline: 'Voice Hard, but Voice HUD helps you',
     loading: 'Loading...',
     error: 'Something went wrong',
     save: 'Save',

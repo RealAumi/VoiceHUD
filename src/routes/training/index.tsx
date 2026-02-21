@@ -12,12 +12,13 @@ function TrainingPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-8">
-      <h1 className="text-2xl font-bold">{t.training.title}</h1>
+    <div className="mx-auto max-w-4xl space-y-8 px-4 py-6">
+      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t.training.title}</h1>
+      </header>
 
-      {/* Training Programs */}
       <section>
-        <h2 className="text-lg font-semibold text-slate-200 mb-4">{t.training.programs}</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">{t.training.programs}</h2>
         <div className="space-y-4">
           {programs.map((program) => (
             <TrainingPlanCard
@@ -29,9 +30,8 @@ function TrainingPage() {
         </div>
       </section>
 
-      {/* Exercise Library */}
       <section>
-        <h2 className="text-lg font-semibold text-slate-200 mb-4">{t.training.exercises}</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100">{t.training.exercises}</h2>
         <div className="space-y-3">
           {exercises.map((exercise) => (
             <ExerciseCard key={exercise.id} exercise={exercise} />

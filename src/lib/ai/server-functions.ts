@@ -18,7 +18,13 @@ interface ProviderRequestInput {
   locale: Locale
 }
 
+interface ConversationTurn {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 interface AnalyzeVoiceRequestInput extends ProviderRequestInput {
+  conversation: ConversationTurn[]
   audio: {
     base64: string
     mediaType: string
@@ -74,9 +80,23 @@ function parseAnalyzeVoiceInput(input: unknown): AnalyzeVoiceRequestInput {
   const provider = parseProviderInput(data)
   const audioData = asObject(data.audio)
   const sizeValue = Number(audioData.size)
+  const conversationRaw = Array.isArray(data.conversation) ? data.conversation : []
+  const conversation: ConversationTurn[] = conversationRaw
+    .map((item) => {
+      const turn = asObject(item)
+      const role = asString(turn.role)
+      const content = asString(turn.content).trim()
+      if ((role === 'user' || role === 'assistant') && content) {
+        return { role, content } as ConversationTurn
+      }
+      return null
+    })
+    .filter((item): item is ConversationTurn => item !== null)
+    .slice(-12)
 
   return {
     ...provider,
+    conversation,
     audio: {
       base64: asString(audioData.base64).trim(),
       mediaType: asString(audioData.mediaType).trim().toLowerCase(),
@@ -313,13 +333,25 @@ export const analyzeVoiceServerFn = createServerFn({ method: 'POST' })
       let text = ''
 
       await tryGenerateWithFallbacks(data, async (model) => {
+        const history = data.conversation.map((turn) => ({
+          role: turn.role,
+          content: turn.content,
+        }))
+
         const result = await generateText({
           model,
           messages: [
+            ...history,
             {
               role: 'user',
               content: [
-                { type: 'text', text: prompt },
+                {
+                  type: 'text',
+                  text:
+                    data.locale === 'zh'
+                      ? `${prompt}\n\n请结合此前多轮对话上下文继续给出建议，保持和上一次建议连贯。`
+                      : `${prompt}\n\nContinue from previous turns and keep the coaching suggestions coherent with prior feedback.`,
+                },
                 {
                   type: 'file',
                   data: data.audio.base64,
