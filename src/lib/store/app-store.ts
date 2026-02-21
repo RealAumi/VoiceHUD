@@ -9,7 +9,7 @@ const STORAGE_KEYS = {
 const DEFAULT_PROVIDER: ProviderConfig = {
   id: 'google',
   apiKey: '',
-  model: 'gemini-3-flash',
+  model: 'gemini-3-flash-preview',
   baseURL: '',
   fallbackBaseURLs: [],
 }
