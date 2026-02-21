@@ -75,11 +75,21 @@ export function useVoiceRecorder() {
         },
       })
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm'
+      const preferredMimeTypes = [
+        'audio/mp4;codecs=mp4a.40.2',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+        'audio/webm;codecs=opus',
+        'audio/webm',
+      ]
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      const mimeType =
+        preferredMimeTypes.find((type) => MediaRecorder.isTypeSupported(type)) ?? ''
+
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       chunksRef.current = []
       startTimeRef.current = Date.now()
@@ -91,7 +101,8 @@ export function useVoiceRecorder() {
       }
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType })
+        const finalMimeType = mediaRecorder.mimeType || mimeType || 'audio/webm'
+        const blob = new Blob(chunksRef.current, { type: finalMimeType })
         stream.getTracks().forEach((track) => track.stop())
         clearInterval(timerRef.current)
 

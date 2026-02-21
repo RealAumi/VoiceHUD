@@ -42,7 +42,11 @@ function getFileExtension(fileName: string): string {
 function resolveAudioMediaType(audioBlob: Blob): string {
   const directType = audioBlob.type.trim().toLowerCase()
   if (directType.startsWith('audio/')) {
-    return directType
+    const normalized = directType.split(';')[0]?.trim() ?? ''
+    if (normalized === 'audio/mp3') return 'audio/mpeg'
+    if (normalized === 'audio/x-wav' || normalized === 'audio/wave') return 'audio/wav'
+    if (normalized === 'audio/x-m4a') return 'audio/mp4'
+    return normalized || 'audio/webm'
   }
 
   if (audioBlob instanceof File) {
@@ -92,6 +96,16 @@ export async function analyzeVoice(
   try {
     const audioBase64 = await blobToBase64(audioBlob)
     const mediaType = resolveAudioMediaType(audioBlob)
+
+    if (config.id === 'openrouter' && mediaType === 'audio/webm') {
+      return {
+        text: '',
+        error:
+          locale === 'zh'
+            ? 'OpenRouter 当前不支持 WebM 录音。请改用上传 MP3/WAV/M4A/OGG，或在支持 OGG/MP4 录音的浏览器中重试。'
+            : 'OpenRouter does not currently accept WebM recordings. Please upload MP3/WAV/M4A/OGG, or retry in a browser that records OGG/MP4.',
+      }
+    }
 
     return await analyzeVoiceServerFn({
       data: {
