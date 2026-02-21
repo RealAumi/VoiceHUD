@@ -85,6 +85,16 @@ export function useVoiceRecorder() {
     }
   }, [])
 
+  const loadAudioFile = useCallback((file: File) => {
+    setState((s) => ({
+      ...s,
+      isRecording: false,
+      duration: 0,
+      audioBlob: file,
+      error: null,
+    }))
+  }, [])
+
   const clearRecording = useCallback(() => {
     setState({
       isRecording: false,
@@ -94,5 +104,5 @@ export function useVoiceRecorder() {
     })
   }, [])
 
-  return { ...state, startRecording, stopRecording, clearRecording }
+  return { ...state, startRecording, stopRecording, loadAudioFile, clearRecording }
 }

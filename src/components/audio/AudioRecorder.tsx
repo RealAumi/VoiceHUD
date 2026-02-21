@@ -1,4 +1,4 @@
-import { Mic, Square, Loader2, Trash2 } from 'lucide-react'
+import { Mic, Square, Loader2, Trash2, Upload } from 'lucide-react'
 import { useI18n } from '#/lib/i18n'
 
 interface AudioRecorderProps {
@@ -7,6 +7,7 @@ interface AudioRecorderProps {
   audioBlob: Blob | null
   onStartRecording: () => void
   onStopRecording: () => void
+  onUpload: (file: File) => void
   onClear: () => void
 }
 
@@ -16,6 +17,7 @@ export function AudioRecorder({
   audioBlob,
   onStartRecording,
   onStopRecording,
+  onUpload,
   onClear,
 }: AudioRecorderProps) {
   const { t } = useI18n()
@@ -29,13 +31,30 @@ export function AudioRecorder({
   return (
     <div className="flex items-center gap-4">
       {!isRecording && !audioBlob && (
-        <button
-          onClick={onStartRecording}
-          className="flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors font-medium"
-        >
-          <Mic size={20} />
-          {t.analysis.recordButton}
-        </button>
+        <>
+          <button
+            onClick={onStartRecording}
+            className="flex items-center gap-2 px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors font-medium"
+          >
+            <Mic size={20} />
+            {t.analysis.recordButton}
+          </button>
+
+          <label className="inline-flex items-center gap-2 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors font-medium cursor-pointer">
+            <Upload size={18} />
+            {t.analysis.uploadButton}
+            <input
+              type="file"
+              accept="audio/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) onUpload(file)
+                e.currentTarget.value = ''
+              }}
+            />
+          </label>
+        </>
       )}
 
       {isRecording && (

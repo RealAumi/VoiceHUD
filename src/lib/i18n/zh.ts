@@ -70,6 +70,7 @@ export const zh = {
     recordButton: '开始录音',
     stopButton: '停止录音',
     analyzeButton: '发送分析',
+    uploadButton: '上传音频',
     result: '分析结果',
     noApiKey: '请先在设置中配置 AI 接入点',
     goToSettings: '前往设置',
