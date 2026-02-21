@@ -47,6 +47,7 @@ export function AudioRecorder({
               type="file"
               accept="audio/*"
               className="hidden"
+              aria-label={t.analysis.uploadInputLabel}
               onChange={(e) => {
                 const file = e.target.files?.[0]
                 if (file) onUpload(file)
