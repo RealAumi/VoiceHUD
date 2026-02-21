@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import { zh } from './zh'
 import { en } from './en'
+import { getLocale, setLocale as setAppLocale } from '#/lib/store/app-store'
 
 export type Locale = 'zh' | 'en'
 export type Translations = typeof zh
@@ -12,14 +13,11 @@ export function getTranslations(locale: Locale): Translations {
 }
 
 export function getStoredLocale(): Locale {
-  if (typeof window === 'undefined') return 'zh'
-  return (localStorage.getItem('voicehud-locale') as Locale) || 'zh'
+  return getLocale()
 }
 
 export function setStoredLocale(locale: Locale) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('voicehud-locale', locale)
-  }
+  setAppLocale(locale)
 }
 
 export interface I18nContextValue {

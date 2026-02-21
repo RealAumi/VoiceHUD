@@ -8,14 +8,20 @@ interface SpectrogramProps {
 export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const historyRef = useRef<Uint8Array[]>([])
+  const wasActiveRef = useRef(false)
   const MAX_COLUMNS = 300
 
   useEffect(() => {
-    if (!isActive || spectrumData.length === 0) return
+    if (isActive && !wasActiveRef.current) {
+      historyRef.current = []
+    }
+    wasActiveRef.current = isActive
 
-    historyRef.current.push(new Uint8Array(spectrumData))
-    if (historyRef.current.length > MAX_COLUMNS) {
-      historyRef.current.shift()
+    if (isActive && spectrumData.length > 0) {
+      historyRef.current.push(new Uint8Array(spectrumData))
+      if (historyRef.current.length > MAX_COLUMNS) {
+        historyRef.current.shift()
+      }
     }
 
     const canvas = canvasRef.current
@@ -34,9 +40,13 @@ export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
     const h = rect.height
     const history = historyRef.current
 
-    // Only show lower half of spectrum (more relevant for voice)
-    const binsToShow = Math.floor(spectrumData.length / 4)
-    const colWidth = w / MAX_COLUMNS
+    if (history.length === 0) {
+      ctx.fillStyle = '#0f172a'
+      ctx.fillRect(0, 0, w, h)
+      return
+    }
+
+    const binsToShow = Math.floor(history[history.length - 1].length / 4)
 
     ctx.fillStyle = '#0f172a'
     ctx.fillRect(0, 0, w, h)
@@ -44,13 +54,13 @@ export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
     for (let col = 0; col < history.length; col++) {
       const data = history[col]
       const x = (col / MAX_COLUMNS) * w
+      const colWidth = w / MAX_COLUMNS
 
       for (let bin = 0; bin < binsToShow; bin++) {
         const value = data[bin]
         const y = h - (bin / binsToShow) * h
         const binHeight = h / binsToShow + 1
 
-        // Color mapping: dark blue -> cyan -> yellow -> white
         const intensity = value / 255
         const r = Math.floor(intensity * intensity * 255)
         const g = Math.floor(intensity * 200 + 55 * intensity * intensity)
@@ -61,12 +71,6 @@ export function Spectrogram({ spectrumData, isActive }: SpectrogramProps) {
       }
     }
   }, [spectrumData, isActive])
-
-  useEffect(() => {
-    if (!isActive) {
-      historyRef.current = []
-    }
-  }, [isActive])
 
   return (
     <div className="rounded-xl bg-slate-900 border border-slate-700 p-4">

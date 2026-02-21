@@ -1,6 +1,5 @@
 /**
  * Unified voice analysis client using Vercel AI SDK.
- * Supports Google Gemini, OpenRouter, and any OpenAI-compatible endpoint.
  */
 import { generateText } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
@@ -53,7 +52,28 @@ async function blobToBase64(blob: Blob): Promise<string> {
   })
 }
 
-function createModel(config: ProviderConfig) {
+function getCandidateBaseURLs(config: ProviderConfig): string[] {
+  const candidates = [config.baseURL, ...(config.fallbackBaseURLs ?? [])]
+  const valid = new Set<string>()
+
+  for (const raw of candidates) {
+    const value = raw.trim()
+    if (!value) continue
+
+    try {
+      const url = new URL(value)
+      if (url.protocol === 'https:' || url.protocol === 'http:') {
+        valid.add(value)
+      }
+    } catch {
+      // ignore invalid endpoint
+    }
+  }
+
+  return [...valid]
+}
+
+function createModel(config: ProviderConfig, overrideBaseURL?: string) {
   const providerType = getPresetType(config.id)
 
   switch (providerType) {
@@ -68,11 +88,37 @@ function createModel(config: ProviderConfig) {
     case 'openai-compatible': {
       const openai = createOpenAI({
         apiKey: config.apiKey,
-        baseURL: config.baseURL,
+        baseURL: overrideBaseURL ?? config.baseURL,
       })
       return openai(config.model)
     }
   }
+}
+
+async function tryGenerateWithFallbacks(
+  config: ProviderConfig,
+  run: (model: ReturnType<typeof createModel>) => Promise<void>
+): Promise<void> {
+  if (getPresetType(config.id) !== 'openai-compatible') {
+    const model = createModel(config)
+    await run(model)
+    return
+  }
+
+  const candidates = getCandidateBaseURLs(config)
+  let lastError: unknown = null
+
+  for (const baseURL of candidates) {
+    try {
+      const model = createModel(config, baseURL)
+      await run(model)
+      return
+    } catch (err) {
+      lastError = err
+    }
+  }
+
+  throw lastError ?? new Error('No available endpoint')
 }
 
 export async function testProviderConnection(
@@ -86,7 +132,7 @@ export async function testProviderConnection(
     }
   }
 
-  if (getPresetType(config.id) === 'openai-compatible' && !config.baseURL.trim()) {
+  if (getPresetType(config.id) === 'openai-compatible' && getCandidateBaseURLs(config).length === 0) {
     return {
       ok: false,
       message: locale === 'zh' ? '请先填写 API 地址' : 'Please fill in API endpoint first',
@@ -94,12 +140,13 @@ export async function testProviderConnection(
   }
 
   try {
-    const model = createModel(config)
-    await generateText({
-      model,
-      prompt: locale === 'zh' ? '回复 "ok"' : 'Reply with "ok"',
-      maxOutputTokens: 10,
-      temperature: 0,
+    await tryGenerateWithFallbacks(config, async (model) => {
+      await generateText({
+        model,
+        prompt: locale === 'zh' ? '回复 "ok"' : 'Reply with "ok"',
+        maxOutputTokens: 10,
+        temperature: 0,
+      })
     })
 
     return {
@@ -128,26 +175,30 @@ export async function analyzeVoice(
     const audioBase64 = await blobToBase64(audioBlob)
     const mediaType = audioBlob.type || 'audio/webm'
 
-    const model = createModel(config)
     const prompt = getVoiceAnalysisPrompt(locale)
+    let text = ''
 
-    const { text } = await generateText({
-      model,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'file',
-              data: audioBase64,
-              mediaType,
-            },
-          ],
-        },
-      ],
-      temperature: 0.7,
-      maxOutputTokens: 2048,
+    await tryGenerateWithFallbacks(config, async (model) => {
+      const result = await generateText({
+        model,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              {
+                type: 'file',
+                data: audioBase64,
+                mediaType,
+              },
+            ],
+          },
+        ],
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+      })
+
+      text = result.text
     })
 
     return { text }
