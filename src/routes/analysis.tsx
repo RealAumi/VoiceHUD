@@ -4,7 +4,8 @@ import { AlertCircle, KeyRound } from 'lucide-react'
 import { useI18n } from '#/lib/i18n'
 import { useVoiceRecorder } from '#/hooks/useVoiceRecorder'
 import { AudioRecorder, AnalyzeButton } from '#/components/audio/AudioRecorder'
-import { getStoredApiKey, analyzeVoice } from '#/lib/gemini/client'
+import { analyzeVoice } from '#/lib/ai/client'
+import { getStoredProvider, isProviderConfigured } from '#/lib/ai/storage'
 
 export const Route = createFileRoute('/analysis')({ component: AnalysisPage })
 
@@ -15,7 +16,7 @@ function AnalysisPage() {
   const [analysisError, setAnalysisError] = useState<string>('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  const apiKey = typeof window !== 'undefined' ? getStoredApiKey() : ''
+  const configured = typeof window !== 'undefined' ? isProviderConfigured() : false
 
   const handleAnalyze = async () => {
     if (!recorder.audioBlob) return
@@ -24,7 +25,8 @@ function AnalysisPage() {
     setAnalysisResult('')
     setAnalysisError('')
 
-    const result = await analyzeVoice(recorder.audioBlob, apiKey, locale)
+    const config = getStoredProvider()
+    const result = await analyzeVoice(recorder.audioBlob, config, locale)
 
     if (result.error) {
       setAnalysisError(result.error)
@@ -40,8 +42,8 @@ function AnalysisPage() {
 
       <p className="text-slate-400">{t.analysis.recordPrompt}</p>
 
-      {/* API Key warning */}
-      {!apiKey && (
+      {/* Provider not configured warning */}
+      {!configured && (
         <div className="flex items-center justify-between gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-400">
           <div className="flex items-center gap-3">
             <KeyRound size={20} />
@@ -79,7 +81,7 @@ function AnalysisPage() {
         <AnalyzeButton
           onClick={handleAnalyze}
           isAnalyzing={isAnalyzing}
-          disabled={!apiKey}
+          disabled={!configured}
           label={isAnalyzing ? t.analysis.analyzing : t.analysis.analyzeButton}
         />
       )}
