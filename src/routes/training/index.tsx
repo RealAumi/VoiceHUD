@@ -8,7 +8,7 @@ import { ExerciseCard } from '#/components/training/ExerciseCard'
 export const Route = createFileRoute('/training/')({ component: TrainingPage })
 
 function TrainingPage() {
-  const { t, locale } = useI18n()
+  const { t } = useI18n()
   const navigate = useNavigate()
 
   return (
