@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { detectPitchYIN, calculateRMS, isVoiced } from '#/lib/audio/pitch-detection'
+import { detectPitchYIN, calculateRMS, getAdaptiveVoiceThreshold, isVoiced } from '#/lib/audio/pitch-detection'
 import { detectFormants, type FormantData } from '#/lib/audio/formant-analysis'
-import { VIS } from '#/lib/audio/constants'
+import { PITCH_DETECTION, VIS } from '#/lib/audio/constants'
 import type { AudioProcessor } from '#/lib/audio/audio-processor'
 
 export interface PitchData {
@@ -21,12 +21,14 @@ export interface PitchData {
   spectrumData: Uint8Array
 }
 
+const EMPTY_FORMANTS: FormantData = { F1: null, F2: null, F3: null }
+
 const INITIAL_DATA: PitchData = {
   pitch: null,
   rms: 0,
   voiced: false,
-  formants: { F1: null, F2: null, F3: null },
-  ghostFormants: { F1: null, F2: null, F3: null },
+  formants: EMPTY_FORMANTS,
+  ghostFormants: EMPTY_FORMANTS,
   pitchHistory: [],
   spectrumData: new Uint8Array(0),
 }
@@ -37,6 +39,7 @@ const HOLD_LAST_VALUE_MS = 600
 /** EMA smoothing factor (0–1). Higher = more smoothing / slower response */
 const PITCH_SMOOTH = 0.45
 const FORMANT_SMOOTH = 0.5
+const INITIAL_NOISE_FLOOR = PITCH_DETECTION.VOICE_THRESHOLD * PITCH_DETECTION.VOICE_THRESHOLD_FLOOR_FACTOR
 
 function ema(prev: number | null, cur: number | null, alpha: number): number | null {
   if (cur === null) return prev
@@ -60,12 +63,13 @@ export function usePitchDetection(processor: AudioProcessor | null) {
   const lastVoicedAtRef = useRef<number>(0)
   const lastVoicedSnapshotRef = useRef<Pick<PitchData, 'pitch' | 'formants' | 'spectrumData'>>({
     pitch: null,
-    formants: { F1: null, F2: null, F3: null },
+    formants: EMPTY_FORMANTS,
     spectrumData: new Uint8Array(0),
   })
   const smoothedPitchRef = useRef<number | null>(null)
-  const smoothedFormantsRef = useRef<FormantData>({ F1: null, F2: null, F3: null })
-  const ghostFormantsRef = useRef<FormantData>({ F1: null, F2: null, F3: null })
+  const smoothedFormantsRef = useRef<FormantData>(EMPTY_FORMANTS)
+  const ghostFormantsRef = useRef<FormantData>(EMPTY_FORMANTS)
+  const noiseFloorRef = useRef<number>(INITIAL_NOISE_FLOOR)
 
   const tick = useCallback(() => {
     if (!processor?.isActive) return
@@ -87,38 +91,45 @@ export function usePitchDetection(processor: AudioProcessor | null) {
     lastEmitAtRef.current = now
 
     const rms = calculateRMS(timeDomain)
-    const detectedVoiced = isVoiced(timeDomain)
+    const adaptiveVoicedThreshold = getAdaptiveVoiceThreshold(noiseFloorRef.current)
+    const detectedVoiced = isVoiced(
+      timeDomain,
+      adaptiveVoicedThreshold,
+      PITCH_DETECTION.WHISPER_BOOST_FACTOR,
+      PITCH_DETECTION.WHISPER_BOOST_MAX_RMS
+    )
     const detectedPitch = detectedVoiced ? detectPitchYIN(timeDomain, processor.sampleRate) : null
-    const detectedFormants = detectedVoiced
+    const hasCurrentVoicedPitch = detectedVoiced && detectedPitch !== null
+    const detectedFormants = hasCurrentVoicedPitch
       ? detectFormants(freqData, processor.sampleRate, processor.fftSize)
-      : { F1: null, F2: null, F3: null }
+      : EMPTY_FORMANTS
 
-    // Apply EMA smoothing when voiced
-    if (detectedVoiced && detectedPitch !== null) {
+    // Treat "voiced gate passed but no pitch" as unvoiced for output/hold updates.
+    if (hasCurrentVoicedPitch) {
       smoothedPitchRef.current = ema(smoothedPitchRef.current, detectedPitch, PITCH_SMOOTH)
       smoothedFormantsRef.current = smoothFormants(smoothedFormantsRef.current, detectedFormants, FORMANT_SMOOTH)
-      // Update ghost formants whenever we have valid voiced data
       ghostFormantsRef.current = { ...smoothedFormantsRef.current }
-    }
-
-    if (detectedVoiced && detectedPitch !== null) {
       lastVoicedAtRef.current = now
       lastVoicedSnapshotRef.current = {
         pitch: smoothedPitchRef.current,
         formants: { ...smoothedFormantsRef.current },
         spectrumData: new Uint8Array(byteFreq),
       }
+    } else {
+      noiseFloorRef.current =
+        noiseFloorRef.current * PITCH_DETECTION.NOISE_FLOOR_EMA_ALPHA
+        + rms * (1 - PITCH_DETECTION.NOISE_FLOOR_EMA_ALPHA)
     }
 
     const withinHold = now - lastVoicedAtRef.current <= HOLD_LAST_VALUE_MS
-    const pitch = detectedVoiced ? smoothedPitchRef.current : withinHold ? lastVoicedSnapshotRef.current.pitch : null
-    const formants = detectedVoiced
+    const pitch = hasCurrentVoicedPitch ? smoothedPitchRef.current : withinHold ? lastVoicedSnapshotRef.current.pitch : null
+    const formants = hasCurrentVoicedPitch
       ? smoothedFormantsRef.current
       : withinHold
         ? lastVoicedSnapshotRef.current.formants
-        : { F1: null, F2: null, F3: null }
-    const voiced = detectedVoiced || withinHold
-    const spectrumData = detectedVoiced ? byteFreq : withinHold ? lastVoicedSnapshotRef.current.spectrumData : byteFreq
+        : EMPTY_FORMANTS
+    const voiced = hasCurrentVoicedPitch || withinHold
+    const spectrumData = hasCurrentVoicedPitch ? byteFreq : withinHold ? lastVoicedSnapshotRef.current.spectrumData : byteFreq
 
     historyRef.current.push(pitch)
     if (historyRef.current.length > VIS.PITCH_HISTORY_LENGTH) {
@@ -144,11 +155,12 @@ export function usePitchDetection(processor: AudioProcessor | null) {
       lastVoicedAtRef.current = 0
       lastEmitAtRef.current = 0
       smoothedPitchRef.current = null
-      smoothedFormantsRef.current = { F1: null, F2: null, F3: null }
-      ghostFormantsRef.current = { F1: null, F2: null, F3: null }
+      smoothedFormantsRef.current = EMPTY_FORMANTS
+      ghostFormantsRef.current = EMPTY_FORMANTS
+      noiseFloorRef.current = INITIAL_NOISE_FLOOR
       lastVoicedSnapshotRef.current = {
         pitch: null,
-        formants: { F1: null, F2: null, F3: null },
+        formants: EMPTY_FORMANTS,
         spectrumData: new Uint8Array(0),
       }
       setData(INITIAL_DATA)
@@ -167,11 +179,12 @@ export function usePitchDetection(processor: AudioProcessor | null) {
     lastVoicedAtRef.current = 0
     lastEmitAtRef.current = 0
     smoothedPitchRef.current = null
-    smoothedFormantsRef.current = { F1: null, F2: null, F3: null }
-    ghostFormantsRef.current = { F1: null, F2: null, F3: null }
+    smoothedFormantsRef.current = EMPTY_FORMANTS
+    ghostFormantsRef.current = EMPTY_FORMANTS
+    noiseFloorRef.current = INITIAL_NOISE_FLOOR
     lastVoicedSnapshotRef.current = {
       pitch: null,
-      formants: { F1: null, F2: null, F3: null },
+      formants: EMPTY_FORMANTS,
       spectrumData: new Uint8Array(0),
     }
     setData(INITIAL_DATA)

@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react'
-import { PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
+import { PITCH_DISPLAY, PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
 import { frequencyToNote } from '#/lib/audio/pitch-detection'
 import { useI18n } from '#/lib/i18n'
 
@@ -38,6 +38,7 @@ export function PitchDisplay({
   const range = PITCH_RANGES[targetRange]
   const { locale } = useI18n()
 
+  const hasValidRange = Number.isFinite(yMin) && Number.isFinite(yMax) && yMin < yMax
   const yRange = yMax - yMin
 
   useEffect(() => {
@@ -59,11 +60,19 @@ export function PitchDisplay({
     const plotW = w - pad.left - pad.right
     const plotH = h - pad.top - pad.bottom
 
-    const toY = (hz: number) => pad.top + plotH - ((hz - yMin) / yRange) * plotH
-
     // Background
     ctx.fillStyle = '#0b1220'
     ctx.fillRect(0, 0, w, h)
+
+    if (!hasValidRange) {
+      ctx.fillStyle = 'rgba(248, 113, 113, 0.9)'
+      ctx.font = '11px system-ui, sans-serif'
+      ctx.textAlign = 'left'
+      ctx.fillText(locale === 'zh' ? '音高范围无效' : 'Invalid pitch range', pad.left, pad.top + 12)
+      return
+    }
+
+    const toY = (hz: number) => pad.top + plotH - ((hz - yMin) / yRange) * plotH
 
     // Target range highlight
     const tMinY = toY(range.min)
@@ -166,7 +175,7 @@ export function PitchDisplay({
 
       ctx.restore()
     }
-  }, [pitch, pitchHistory, range, yMin, yMax, yRange])
+  }, [pitch, pitchHistory, range, yMin, yMax, yRange, hasValidRange, locale])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
@@ -194,7 +203,7 @@ export function PitchDisplay({
             onChange={(e) => onYMinChange(Number(e.target.value))}
             className="rounded border border-slate-300 bg-transparent px-1.5 py-0.5 text-xs dark:border-slate-700"
           >
-            {[0, 25, 50, 75, 100].map((v) => (
+            {PITCH_DISPLAY.Y_MIN_OPTIONS.map((v) => (
               <option key={v} value={v}>{v} Hz</option>
             ))}
           </select>
@@ -206,16 +215,22 @@ export function PitchDisplay({
             onChange={(e) => onYMaxChange(Number(e.target.value))}
             className="rounded border border-slate-300 bg-transparent px-1.5 py-0.5 text-xs dark:border-slate-700"
           >
-            {[300, 400, 500, 600, 800].map((v) => (
+            {PITCH_DISPLAY.Y_MAX_OPTIONS.map((v) => (
               <option key={v} value={v}>{v} Hz</option>
             ))}
           </select>
         </label>
-        <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500">
-          {locale === 'zh'
-            ? `目标区间 ${range.min}–${range.max} Hz`
-            : `Target ${range.min}–${range.max} Hz`}
-        </span>
+        {hasValidRange ? (
+          <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500">
+            {locale === 'zh'
+              ? `目标区间 ${range.min}–${range.max} Hz`
+              : `Target ${range.min}–${range.max} Hz`}
+          </span>
+        ) : (
+          <span className="ml-auto text-[10px] text-rose-500 dark:text-rose-400">
+            {locale === 'zh' ? '请将下限设置为小于上限' : 'Set Min lower than Max'}
+          </span>
+        )}
       </div>
     </div>
   )

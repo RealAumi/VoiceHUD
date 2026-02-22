@@ -27,6 +27,26 @@ export const PITCH_DETECTION = {
   YIN_THRESHOLD: 0.15,
   /** Minimum RMS amplitude to consider signal as voiced */
   VOICE_THRESHOLD: 0.01,
+  /** Dynamic threshold floor multiplier for whisper sensitivity */
+  VOICE_THRESHOLD_FLOOR_FACTOR: 0.55,
+  /** Dynamic threshold ceiling multiplier to limit noise false positives */
+  VOICE_THRESHOLD_CEILING_FACTOR: 1.35,
+  /** Scale estimated noise floor into an adaptive voiced threshold */
+  VOICE_THRESHOLD_NOISE_MULTIPLIER: 1.8,
+  /** EMA alpha used for noise floor estimation */
+  NOISE_FLOOR_EMA_ALPHA: 0.92,
+  /** Modest RMS boost for low-amplitude whisper detection path only */
+  WHISPER_BOOST_FACTOR: 1.18,
+  /** Apply whisper boost only below this RMS */
+  WHISPER_BOOST_MAX_RMS: 0.02,
+} as const
+
+/** Pitch display axis configuration */
+export const PITCH_DISPLAY = {
+  DEFAULT_Y_MIN: 50,
+  DEFAULT_Y_MAX: 400,
+  Y_MIN_OPTIONS: [0, 25, 50, 75, 100],
+  Y_MAX_OPTIONS: [300, 400, 500, 600, 800],
 } as const
 
 /** Visualization constants */

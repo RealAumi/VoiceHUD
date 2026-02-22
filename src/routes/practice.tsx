@@ -1,19 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mic, MicOff, AlertCircle, ChevronDown, Activity, Target, AudioWaveform } from 'lucide-react'
 import { useI18n } from '#/lib/i18n'
 import { useAudioInput } from '#/hooks/useAudioInput'
 import { usePitchDetection } from '#/hooks/usePitchDetection'
 import { VoiceHUD } from '#/components/audio/VoiceHUD'
-import { PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
+import { PITCH_DISPLAY, PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
 
 export const Route = createFileRoute('/practice')({ component: PracticePage })
 
 function PracticePage() {
   const { t, locale } = useI18n()
   const [targetRange, setTargetRange] = useState<PitchRangeKey>('female')
-  const [pitchMin, setPitchMin] = useState(50)
-  const [pitchMax, setPitchMax] = useState(400)
+  const [pitchMin, setPitchMin] = useState<number>(PITCH_DISPLAY.DEFAULT_Y_MIN)
+  const [pitchMax, setPitchMax] = useState<number>(PITCH_DISPLAY.DEFAULT_Y_MAX)
   const { isActive, isSupported, error, start, stop, getProcessor } = useAudioInput()
   const { data } = usePitchDetection(getProcessor())
 
@@ -22,6 +22,27 @@ function PracticePage() {
   const avgPitch = validPitches.length > 0 ? Math.round(validPitches.reduce((a, b) => a + b, 0) / validPitches.length) : null
   const currentPitch = data.pitch ? Math.round(data.pitch) : null
   const inRange = currentPitch !== null && currentPitch >= PITCH_RANGES[targetRange].min && currentPitch <= PITCH_RANGES[targetRange].max
+
+  const handlePitchMinChange = (nextMin: number) => {
+    setPitchMin(nextMin)
+    if (nextMin >= pitchMax) {
+      setPitchMax(PITCH_DISPLAY.DEFAULT_Y_MAX)
+    }
+  }
+
+  const handlePitchMaxChange = (nextMax: number) => {
+    setPitchMax(nextMax)
+    if (pitchMin >= nextMax) {
+      setPitchMin(PITCH_DISPLAY.DEFAULT_Y_MIN)
+    }
+  }
+
+  useEffect(() => {
+    if (pitchMin >= pitchMax) {
+      setPitchMin(PITCH_DISPLAY.DEFAULT_Y_MIN)
+      setPitchMax(PITCH_DISPLAY.DEFAULT_Y_MAX)
+    }
+  }, [pitchMin, pitchMax])
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
@@ -123,8 +144,8 @@ function PracticePage() {
           isActive={isActive}
           pitchMin={pitchMin}
           pitchMax={pitchMax}
-          onPitchMinChange={setPitchMin}
-          onPitchMaxChange={setPitchMax}
+          onPitchMinChange={handlePitchMinChange}
+          onPitchMaxChange={handlePitchMaxChange}
         />
       )}
 
