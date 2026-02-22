@@ -83,13 +83,31 @@ export function calculateRMS(buffer: Float32Array): number {
 }
 
 /**
+ * Compute a bounded voiced threshold from recent noise floor estimates.
+ */
+export function getAdaptiveVoiceThreshold(
+  noiseFloor: number,
+  baseThreshold: number = PITCH_DETECTION.VOICE_THRESHOLD
+): number {
+  const normalizedNoiseFloor = Number.isFinite(noiseFloor) ? Math.max(0, noiseFloor) : 0
+  const thresholdFloor = baseThreshold * PITCH_DETECTION.VOICE_THRESHOLD_FLOOR_FACTOR
+  const thresholdCeiling = baseThreshold * PITCH_DETECTION.VOICE_THRESHOLD_CEILING_FACTOR
+  const noiseScaledThreshold = normalizedNoiseFloor * PITCH_DETECTION.VOICE_THRESHOLD_NOISE_MULTIPLIER
+  return Math.min(thresholdCeiling, Math.max(thresholdFloor, noiseScaledThreshold))
+}
+
+/**
  * Check if the signal is voiced (has enough energy)
  */
 export function isVoiced(
   buffer: Float32Array,
-  threshold: number = PITCH_DETECTION.VOICE_THRESHOLD
+  threshold: number = PITCH_DETECTION.VOICE_THRESHOLD,
+  whisperBoost: number = 1,
+  whisperBoostMaxRms: number = PITCH_DETECTION.WHISPER_BOOST_MAX_RMS
 ): boolean {
-  return calculateRMS(buffer) > threshold
+  const rms = calculateRMS(buffer)
+  const boostedRms = whisperBoost > 1 && rms <= whisperBoostMaxRms ? rms * whisperBoost : rms
+  return boostedRms > threshold
 }
 
 /**
