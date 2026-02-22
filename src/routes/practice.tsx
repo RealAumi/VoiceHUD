@@ -74,7 +74,6 @@ function PracticePage() {
         <div className="mt-4 flex flex-wrap items-center gap-4">
           <button
             onClick={isActive ? stop : start}
-            disabled={!isSupported}
             className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 font-medium transition-colors ${
               isActive
                 ? 'border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'
@@ -103,11 +102,13 @@ function PracticePage() {
           </div>
         </div>
 
-        {!isSupported && (
+        {!isSupported && !error && (
           <div className="mt-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
             <AlertCircle size={20} />
             <span className="text-sm">
-              {locale === 'zh' ? '你的浏览器不支持麦克风访问，请使用 Chrome 或 Firefox' : 'Your browser does not support microphone access. Please use Chrome or Firefox.'}
+              {locale === 'zh'
+                ? '当前环境可能无法访问麦克风，请确认已使用 HTTPS（或 localhost）并授予麦克风权限。'
+                : 'Microphone may be unavailable in this environment. Please use HTTPS (or localhost) and allow microphone permission.'}
             </span>
           </div>
         )}
@@ -133,7 +134,7 @@ function PracticePage() {
         </ul>
       </details>
 
-      {!isActive && !error && isSupported && !hasSnapshot && (
+      {!isActive && !error && !hasSnapshot && (
         <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">{t.practice.micPermission}</p>
       )}
 
