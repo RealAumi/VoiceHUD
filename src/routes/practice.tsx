@@ -1,17 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Mic, MicOff, AlertCircle, ChevronDown, Activity, Target, AudioWaveform } from 'lucide-react'
 import { useI18n } from '#/lib/i18n'
 import { useAudioInput } from '#/hooks/useAudioInput'
 import { usePitchDetection } from '#/hooks/usePitchDetection'
 import { VoiceHUD } from '#/components/audio/VoiceHUD'
-import { PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
+import { PITCH_DISPLAY, PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
 
 export const Route = createFileRoute('/practice')({ component: PracticePage })
 
 function PracticePage() {
   const { t, locale } = useI18n()
   const [targetRange, setTargetRange] = useState<PitchRangeKey>('female')
+  const [pitchMin, setPitchMin] = useState<number>(PITCH_DISPLAY.DEFAULT_Y_MIN)
+  const [pitchMax, setPitchMax] = useState<number>(PITCH_DISPLAY.DEFAULT_Y_MAX)
   const { isActive, isSupported, error, start, stop, getProcessor } = useAudioInput()
   const { data } = usePitchDetection(getProcessor())
 
@@ -20,6 +22,27 @@ function PracticePage() {
   const avgPitch = validPitches.length > 0 ? Math.round(validPitches.reduce((a, b) => a + b, 0) / validPitches.length) : null
   const currentPitch = data.pitch ? Math.round(data.pitch) : null
   const inRange = currentPitch !== null && currentPitch >= PITCH_RANGES[targetRange].min && currentPitch <= PITCH_RANGES[targetRange].max
+
+  const handlePitchMinChange = (nextMin: number) => {
+    setPitchMin(nextMin)
+    if (nextMin >= pitchMax) {
+      setPitchMax(PITCH_DISPLAY.DEFAULT_Y_MAX)
+    }
+  }
+
+  const handlePitchMaxChange = (nextMax: number) => {
+    setPitchMax(nextMax)
+    if (pitchMin >= nextMax) {
+      setPitchMin(PITCH_DISPLAY.DEFAULT_Y_MIN)
+    }
+  }
+
+  useEffect(() => {
+    if (pitchMin >= pitchMax) {
+      setPitchMin(PITCH_DISPLAY.DEFAULT_Y_MIN)
+      setPitchMax(PITCH_DISPLAY.DEFAULT_Y_MAX)
+    }
+  }, [pitchMin, pitchMax])
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
@@ -106,6 +129,7 @@ function PracticePage() {
           <li>{locale === 'zh' ? '优先看左侧大 Pitch 图，让轨迹更平稳。' : 'Prioritize stabilizing the large pitch trace on the left.'}</li>
           <li>{locale === 'zh' ? '目标是让曲线更多时间待在目标音域高亮区。' : 'Keep the trace within the highlighted target band as long as possible.'}</li>
           <li>{locale === 'zh' ? '右侧 Formants 观察共振变化，频谱图观察噪声/紧张迹象。' : 'Use Formants for resonance placement and Spectrogram for strain/noise clues.'}</li>
+          <li>{locale === 'zh' ? '停止发声后共振峰会保留虚影，方便回顾。' : 'Formant ghost bars persist after you stop speaking for easy review.'}</li>
         </ul>
       </details>
 
@@ -113,7 +137,17 @@ function PracticePage() {
         <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">{t.practice.micPermission}</p>
       )}
 
-      {(isActive || hasSnapshot) && <VoiceHUD data={data} targetRange={targetRange} isActive={isActive} />}
+      {(isActive || hasSnapshot) && (
+        <VoiceHUD
+          data={data}
+          targetRange={targetRange}
+          isActive={isActive}
+          pitchMin={pitchMin}
+          pitchMax={pitchMax}
+          onPitchMinChange={handlePitchMinChange}
+          onPitchMaxChange={handlePitchMaxChange}
+        />
+      )}
 
       {isActive && !data.voiced && <p className="animate-pulse text-center text-sm text-slate-500 dark:text-slate-400">{t.practice.noSignal}</p>}
     </div>
