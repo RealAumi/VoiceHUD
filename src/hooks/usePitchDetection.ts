@@ -13,6 +13,8 @@ export interface PitchData {
   voiced: boolean
   /** Formant frequencies */
   formants: FormantData
+  /** Last detected formant values (ghost/persistence) */
+  ghostFormants: FormantData
   /** History of recent pitch values */
   pitchHistory: (number | null)[]
   /** Frequency spectrum data for visualization */
@@ -24,12 +26,31 @@ const INITIAL_DATA: PitchData = {
   rms: 0,
   voiced: false,
   formants: { F1: null, F2: null, F3: null },
+  ghostFormants: { F1: null, F2: null, F3: null },
   pitchHistory: [],
   spectrumData: new Uint8Array(0),
 }
 
-const UPDATE_INTERVAL_MS = 240
-const HOLD_LAST_VALUE_MS = 340
+const UPDATE_INTERVAL_MS = 80
+const HOLD_LAST_VALUE_MS = 600
+
+/** EMA smoothing factor (0–1). Higher = more smoothing / slower response */
+const PITCH_SMOOTH = 0.45
+const FORMANT_SMOOTH = 0.5
+
+function ema(prev: number | null, cur: number | null, alpha: number): number | null {
+  if (cur === null) return prev
+  if (prev === null) return cur
+  return prev * alpha + cur * (1 - alpha)
+}
+
+function smoothFormants(prev: FormantData, cur: FormantData, alpha: number): FormantData {
+  return {
+    F1: ema(prev.F1, cur.F1, alpha),
+    F2: ema(prev.F2, cur.F2, alpha),
+    F3: ema(prev.F3, cur.F3, alpha),
+  }
+}
 
 export function usePitchDetection(processor: AudioProcessor | null) {
   const [data, setData] = useState<PitchData>(INITIAL_DATA)
@@ -42,6 +63,9 @@ export function usePitchDetection(processor: AudioProcessor | null) {
     formants: { F1: null, F2: null, F3: null },
     spectrumData: new Uint8Array(0),
   })
+  const smoothedPitchRef = useRef<number | null>(null)
+  const smoothedFormantsRef = useRef<FormantData>({ F1: null, F2: null, F3: null })
+  const ghostFormantsRef = useRef<FormantData>({ F1: null, F2: null, F3: null })
 
   const tick = useCallback(() => {
     if (!processor?.isActive) return
@@ -69,19 +93,27 @@ export function usePitchDetection(processor: AudioProcessor | null) {
       ? detectFormants(freqData, processor.sampleRate, processor.fftSize)
       : { F1: null, F2: null, F3: null }
 
+    // Apply EMA smoothing when voiced
+    if (detectedVoiced && detectedPitch !== null) {
+      smoothedPitchRef.current = ema(smoothedPitchRef.current, detectedPitch, PITCH_SMOOTH)
+      smoothedFormantsRef.current = smoothFormants(smoothedFormantsRef.current, detectedFormants, FORMANT_SMOOTH)
+      // Update ghost formants whenever we have valid voiced data
+      ghostFormantsRef.current = { ...smoothedFormantsRef.current }
+    }
+
     if (detectedVoiced && detectedPitch !== null) {
       lastVoicedAtRef.current = now
       lastVoicedSnapshotRef.current = {
-        pitch: detectedPitch,
-        formants: detectedFormants,
+        pitch: smoothedPitchRef.current,
+        formants: { ...smoothedFormantsRef.current },
         spectrumData: new Uint8Array(byteFreq),
       }
     }
 
     const withinHold = now - lastVoicedAtRef.current <= HOLD_LAST_VALUE_MS
-    const pitch = detectedVoiced ? detectedPitch : withinHold ? lastVoicedSnapshotRef.current.pitch : null
+    const pitch = detectedVoiced ? smoothedPitchRef.current : withinHold ? lastVoicedSnapshotRef.current.pitch : null
     const formants = detectedVoiced
-      ? detectedFormants
+      ? smoothedFormantsRef.current
       : withinHold
         ? lastVoicedSnapshotRef.current.formants
         : { F1: null, F2: null, F3: null }
@@ -98,6 +130,7 @@ export function usePitchDetection(processor: AudioProcessor | null) {
       rms,
       voiced,
       formants,
+      ghostFormants: ghostFormantsRef.current,
       pitchHistory: [...historyRef.current],
       spectrumData,
     })
@@ -110,6 +143,9 @@ export function usePitchDetection(processor: AudioProcessor | null) {
       historyRef.current = []
       lastVoicedAtRef.current = 0
       lastEmitAtRef.current = 0
+      smoothedPitchRef.current = null
+      smoothedFormantsRef.current = { F1: null, F2: null, F3: null }
+      ghostFormantsRef.current = { F1: null, F2: null, F3: null }
       lastVoicedSnapshotRef.current = {
         pitch: null,
         formants: { F1: null, F2: null, F3: null },
@@ -130,6 +166,9 @@ export function usePitchDetection(processor: AudioProcessor | null) {
     historyRef.current = []
     lastVoicedAtRef.current = 0
     lastEmitAtRef.current = 0
+    smoothedPitchRef.current = null
+    smoothedFormantsRef.current = { F1: null, F2: null, F3: null }
+    ghostFormantsRef.current = { F1: null, F2: null, F3: null }
     lastVoicedSnapshotRef.current = {
       pitch: null,
       formants: { F1: null, F2: null, F3: null },

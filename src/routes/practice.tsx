@@ -12,6 +12,8 @@ export const Route = createFileRoute('/practice')({ component: PracticePage })
 function PracticePage() {
   const { t, locale } = useI18n()
   const [targetRange, setTargetRange] = useState<PitchRangeKey>('female')
+  const [pitchMin, setPitchMin] = useState(50)
+  const [pitchMax, setPitchMax] = useState(400)
   const { isActive, isSupported, error, start, stop, getProcessor } = useAudioInput()
   const { data } = usePitchDetection(getProcessor())
 
@@ -106,6 +108,7 @@ function PracticePage() {
           <li>{locale === 'zh' ? '优先看左侧大 Pitch 图，让轨迹更平稳。' : 'Prioritize stabilizing the large pitch trace on the left.'}</li>
           <li>{locale === 'zh' ? '目标是让曲线更多时间待在目标音域高亮区。' : 'Keep the trace within the highlighted target band as long as possible.'}</li>
           <li>{locale === 'zh' ? '右侧 Formants 观察共振变化，频谱图观察噪声/紧张迹象。' : 'Use Formants for resonance placement and Spectrogram for strain/noise clues.'}</li>
+          <li>{locale === 'zh' ? '停止发声后共振峰会保留虚影，方便回顾。' : 'Formant ghost bars persist after you stop speaking for easy review.'}</li>
         </ul>
       </details>
 
@@ -113,7 +116,17 @@ function PracticePage() {
         <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">{t.practice.micPermission}</p>
       )}
 
-      {(isActive || hasSnapshot) && <VoiceHUD data={data} targetRange={targetRange} isActive={isActive} />}
+      {(isActive || hasSnapshot) && (
+        <VoiceHUD
+          data={data}
+          targetRange={targetRange}
+          isActive={isActive}
+          pitchMin={pitchMin}
+          pitchMax={pitchMax}
+          onPitchMinChange={setPitchMin}
+          onPitchMaxChange={setPitchMax}
+        />
+      )}
 
       {isActive && !data.voiced && <p className="animate-pulse text-center text-sm text-slate-500 dark:text-slate-400">{t.practice.noSignal}</p>}
     </div>

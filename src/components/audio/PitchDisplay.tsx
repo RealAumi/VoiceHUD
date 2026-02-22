@@ -1,6 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
 import { frequencyToNote } from '#/lib/audio/pitch-detection'
+import { useI18n } from '#/lib/i18n'
 
 interface PitchDisplayProps {
   pitch: number | null
@@ -8,6 +9,18 @@ interface PitchDisplayProps {
   targetRange: PitchRangeKey
   voiced: boolean
   heightClassName?: string
+  yMin: number
+  yMax: number
+  onYMinChange: (v: number) => void
+  onYMaxChange: (v: number) => void
+}
+
+/** Compute nice grid step for a given range */
+function niceStep(range: number): number {
+  if (range <= 100) return 20
+  if (range <= 200) return 25
+  if (range <= 400) return 50
+  return 100
 }
 
 export function PitchDisplay({
@@ -16,9 +29,16 @@ export function PitchDisplay({
   targetRange,
   voiced,
   heightClassName = 'h-48 lg:h-64',
+  yMin,
+  yMax,
+  onYMinChange,
+  onYMaxChange,
 }: PitchDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const range = PITCH_RANGES[targetRange]
+  const { locale } = useI18n()
+
+  const yRange = yMax - yMin
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -35,46 +55,87 @@ export function PitchDisplay({
 
     const w = rect.width
     const h = rect.height
+    const pad = { left: 44, right: 12, top: 8, bottom: 20 }
+    const plotW = w - pad.left - pad.right
+    const plotH = h - pad.top - pad.bottom
 
+    const toY = (hz: number) => pad.top + plotH - ((hz - yMin) / yRange) * plotH
+
+    // Background
     ctx.fillStyle = '#0b1220'
     ctx.fillRect(0, 0, w, h)
 
-    const minY = h - ((range.min - 50) / 550) * h
-    const maxY = h - ((range.max - 50) / 550) * h
+    // Target range highlight
+    const tMinY = toY(range.min)
+    const tMaxY = toY(range.max)
+    ctx.fillStyle = 'rgba(20, 184, 166, 0.10)'
+    ctx.fillRect(pad.left, tMaxY, plotW, tMinY - tMaxY)
 
-    ctx.fillStyle = 'rgba(20, 184, 166, 0.12)'
-    ctx.fillRect(0, maxY, w, minY - maxY)
-
-    ctx.strokeStyle = 'rgba(20, 184, 166, 0.35)'
-    ctx.setLineDash([4, 4])
+    // Target range dashed borders
+    ctx.strokeStyle = 'rgba(20, 184, 166, 0.4)'
+    ctx.lineWidth = 1
+    ctx.setLineDash([6, 4])
     ctx.beginPath()
-    ctx.moveTo(0, minY)
-    ctx.lineTo(w, minY)
-    ctx.moveTo(0, maxY)
-    ctx.lineTo(w, maxY)
+    ctx.moveTo(pad.left, tMinY)
+    ctx.lineTo(pad.left + plotW, tMinY)
+    ctx.moveTo(pad.left, tMaxY)
+    ctx.lineTo(pad.left + plotW, tMaxY)
     ctx.stroke()
     ctx.setLineDash([])
 
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.9)'
-    ctx.font = '11px sans-serif'
-    ctx.fillText(`${range.min} Hz`, 6, minY - 4)
-    ctx.fillText(`${range.max} Hz`, 6, maxY + 14)
+    // Target range labels
+    ctx.fillStyle = 'rgba(20, 184, 166, 0.7)'
+    ctx.font = '10px system-ui, sans-serif'
+    ctx.textAlign = 'left'
+    ctx.fillText(`${range.min} Hz`, pad.left + 4, tMinY - 3)
+    ctx.fillText(`${range.max} Hz`, pad.left + 4, tMaxY + 12)
 
+    // Grid lines and Y-axis labels
+    const step = niceStep(yRange)
+    const firstGrid = Math.ceil(yMin / step) * step
+    ctx.textAlign = 'right'
+
+    for (let freq = firstGrid; freq <= yMax; freq += step) {
+      const y = toY(freq)
+      if (y < pad.top || y > pad.top + plotH) continue
+
+      ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)'
+      ctx.lineWidth = 1
+      ctx.beginPath()
+      ctx.moveTo(pad.left, y)
+      ctx.lineTo(pad.left + plotW, y)
+      ctx.stroke()
+
+      ctx.fillStyle = 'rgba(148, 163, 184, 0.5)'
+      ctx.font = '10px system-ui, sans-serif'
+      ctx.fillText(`${freq}`, pad.left - 6, y + 3)
+    }
+
+    // Pitch history line
     if (pitchHistory.length > 1) {
+      // Clip to plot area
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(pad.left, pad.top, plotW, plotH)
+      ctx.clip()
+
       ctx.beginPath()
       ctx.strokeStyle = '#2dd4bf'
       ctx.lineWidth = 2
       ctx.lineJoin = 'round'
+      ctx.lineCap = 'round'
 
       let started = false
       for (let i = 0; i < pitchHistory.length; i++) {
         const val = pitchHistory[i]
         if (val === null) {
+          if (started) ctx.stroke()
+          ctx.beginPath()
           started = false
           continue
         }
-        const x = (i / (pitchHistory.length - 1)) * w
-        const y = h - ((val - 50) / 550) * h
+        const x = pad.left + (i / (pitchHistory.length - 1)) * plotW
+        const y = toY(val)
         if (!started) {
           ctx.moveTo(x, y)
           started = true
@@ -82,43 +143,30 @@ export function PitchDisplay({
           ctx.lineTo(x, y)
         }
       }
-      ctx.stroke()
+      if (started) ctx.stroke()
 
+      // Current pitch indicator
       if (pitch !== null) {
-        const x = w
-        const y = h - ((pitch - 50) / 550) * h
+        const x = pad.left + plotW
+        const y = toY(pitch)
         const inRange = pitch >= range.min && pitch <= range.max
+        const baseColor = inRange ? '#2dd4bf' : '#fb923c'
+        const glowColor = inRange ? 'rgba(45, 212, 191, 0.3)' : 'rgba(251, 146, 60, 0.3)'
 
         ctx.beginPath()
-        ctx.arc(x - 2, y, 7, 0, Math.PI * 2)
-        ctx.fillStyle = inRange ? 'rgba(45, 212, 191, 0.35)' : 'rgba(251, 146, 60, 0.35)'
+        ctx.arc(x, y, 8, 0, Math.PI * 2)
+        ctx.fillStyle = glowColor
         ctx.fill()
 
         ctx.beginPath()
-        ctx.arc(x - 2, y, 3.5, 0, Math.PI * 2)
-        ctx.fillStyle = inRange ? '#2dd4bf' : '#fb923c'
+        ctx.arc(x, y, 3.5, 0, Math.PI * 2)
+        ctx.fillStyle = baseColor
         ctx.fill()
       }
-    }
 
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.14)'
-    ctx.lineWidth = 1
-    for (let freq = 100; freq <= 500; freq += 50) {
-      const y = h - ((freq - 50) / 550) * h
-      ctx.beginPath()
-      ctx.moveTo(0, y)
-      ctx.lineTo(w, y)
-      ctx.stroke()
-
-      if (freq % 100 === 0) {
-        ctx.fillStyle = 'rgba(148, 163, 184, 0.4)'
-        ctx.font = '10px sans-serif'
-        ctx.textAlign = 'right'
-        ctx.fillText(`${freq}`, w - 6, y - 3)
-        ctx.textAlign = 'left'
-      }
+      ctx.restore()
     }
-  }, [pitch, pitchHistory, range])
+  }, [pitch, pitchHistory, range, yMin, yMax, yRange])
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
@@ -137,6 +185,38 @@ export function PitchDisplay({
         </div>
       </div>
       <canvas ref={canvasRef} className={`w-full rounded-lg ${heightClassName}`} style={{ imageRendering: 'pixelated' }} />
+      {/* Y-axis range controls */}
+      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+        <label className="flex items-center gap-1">
+          {locale === 'zh' ? '下限' : 'Min'}
+          <select
+            value={yMin}
+            onChange={(e) => onYMinChange(Number(e.target.value))}
+            className="rounded border border-slate-300 bg-transparent px-1.5 py-0.5 text-xs dark:border-slate-700"
+          >
+            {[0, 25, 50, 75, 100].map((v) => (
+              <option key={v} value={v}>{v} Hz</option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-1">
+          {locale === 'zh' ? '上限' : 'Max'}
+          <select
+            value={yMax}
+            onChange={(e) => onYMaxChange(Number(e.target.value))}
+            className="rounded border border-slate-300 bg-transparent px-1.5 py-0.5 text-xs dark:border-slate-700"
+          >
+            {[300, 400, 500, 600, 800].map((v) => (
+              <option key={v} value={v}>{v} Hz</option>
+            ))}
+          </select>
+        </label>
+        <span className="ml-auto text-[10px] text-slate-400 dark:text-slate-500">
+          {locale === 'zh'
+            ? `目标区间 ${range.min}–${range.max} Hz`
+            : `Target ${range.min}–${range.max} Hz`}
+        </span>
+      </div>
     </div>
   )
 }
