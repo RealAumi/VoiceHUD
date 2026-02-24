@@ -45,6 +45,8 @@ function AnalysisPage() {
     activeSessionIdRef.current = activeSessionId
   }, [activeSessionId])
 
+  const handleSendAudioRef = useRef<(blob: Blob) => Promise<void>>(async () => {})
+
   const configured = config.apiKey.trim().length > 0
 
   const activeSession = useMemo(
@@ -161,6 +163,7 @@ function AnalysisPage() {
     }
     setIsAnalyzing(false)
   }
+  handleSendAudioRef.current = handleSendAudio
 
   const handleSendText = async (text: string) => {
     if (!activeSessionId) return
@@ -204,11 +207,17 @@ function AnalysisPage() {
   }
 
   // When file is loaded via upload, send it
+  const prevBlobRef = useRef<Blob | null>(null)
   useEffect(() => {
-    if (recorder.audioBlob && !recorder.isRecording) {
-      void handleSendAudio(recorder.audioBlob).then(() => recorder.clearRecording())
+    if (recorder.audioBlob && recorder.audioBlob !== prevBlobRef.current && !recorder.isRecording) {
+      prevBlobRef.current = recorder.audioBlob
+      const blob = recorder.audioBlob
+      void (async () => {
+        await handleSendAudioRef.current(blob)
+        recorder.clearRecording()
+      })()
     }
-  }, [recorder.audioBlob])
+  }, [recorder.audioBlob, recorder.isRecording, recorder.clearRecording])
 
   const handleSavePrompt = () => {
     setCustomPrompt(promptDraft)
