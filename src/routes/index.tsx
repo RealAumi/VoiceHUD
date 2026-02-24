@@ -5,6 +5,8 @@ import { motion } from 'motion/react'
 
 export const Route = createFileRoute('/')({ component: HomePage })
 
+const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94]
+
 const containerVariants = {
   hidden: {},
   visible: {
@@ -18,7 +20,7 @@ const itemVariants = {
     opacity: 1,
     y: 0,
     filter: 'blur(0px)',
-    transition: { duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.6, ease: EASE_OUT },
   },
 }
 
@@ -31,7 +33,7 @@ const featureCardVariants = {
     transition: {
       duration: 0.5,
       delay: 0.4 + i * 0.12,
-      ease: [0.25, 0.46, 0.45, 0.94],
+      ease: EASE_OUT,
     },
   }),
 }

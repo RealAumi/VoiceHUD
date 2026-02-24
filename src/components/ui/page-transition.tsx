@@ -1,6 +1,8 @@
 import { type ReactNode } from 'react'
 import { motion } from 'motion/react'
 
+const EASE_OUT: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94]
+
 const pageVariants = {
   hidden: { opacity: 0, y: 16 },
   visible: {
@@ -8,7 +10,7 @@ const pageVariants = {
     y: 0,
     transition: {
       duration: 0.4,
-      ease: [0.25, 0.46, 0.45, 0.94],
+      ease: EASE_OUT,
       staggerChildren: 0.08,
     },
   },
@@ -19,7 +21,7 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] },
+    transition: { duration: 0.4, ease: EASE_OUT },
   },
 }
 
