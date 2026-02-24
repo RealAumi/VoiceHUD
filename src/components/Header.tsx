@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Home, Menu, X, Mic, Brain, BookOpen, Settings, AudioWaveform } from 'lucide-react'
+import { Home, Menu, X, Mic, Brain, BookOpen, Settings, AudioWaveform, Github } from 'lucide-react'
 import { useI18n } from '#/lib/i18n'
 import { AnimatePresence, motion } from 'motion/react'
 
@@ -58,12 +58,25 @@ export default function Header() {
             ))}
           </nav>
 
-          <button
-            onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
-            className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 transition-colors hover:border-slate-900 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-300 dark:hover:text-slate-100"
-          >
-            {locale === 'zh' ? 'EN' : '中'}
-          </button>
+          <div className="flex items-center gap-2">
+            <a
+              href="https://github.com/RealAumi/VoiceHUD"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition-colors hover:border-slate-900 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-300 dark:hover:text-slate-100"
+              aria-label="View on GitHub"
+              title="GitHub"
+            >
+              <Github size={16} />
+            </a>
+
+            <button
+              onClick={() => setLocale(locale === 'zh' ? 'en' : 'zh')}
+              className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-600 transition-colors hover:border-slate-900 hover:text-slate-900 dark:border-slate-700 dark:text-slate-300 dark:hover:border-slate-300 dark:hover:text-slate-100"
+            >
+              {locale === 'zh' ? 'EN' : '中'}
+            </button>
+          </div>
         </div>
       </motion.header>
 
