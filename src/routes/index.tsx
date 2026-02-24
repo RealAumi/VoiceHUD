@@ -73,7 +73,7 @@ function HomePage() {
       </div>
 
       {/* Hero Section */}
-      <section className="relative px-6 pt-16 pb-20 md:pt-24 md:pb-28">
+      <section className="relative px-4 pt-12 pb-16 sm:px-6 md:pt-24 md:pb-28">
         <motion.div
           className="mx-auto max-w-4xl text-center"
           variants={containerVariants}
@@ -81,7 +81,7 @@ function HomePage() {
           animate="visible"
         >
           <motion.div variants={itemVariants}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/60 px-4 py-1.5 text-xs font-medium text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-300">
+            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/60 px-3 py-1 text-[11px] font-medium text-slate-600 shadow-sm backdrop-blur-sm sm:px-4 sm:py-1.5 sm:text-xs dark:border-slate-700/60 dark:bg-slate-800/60 dark:text-slate-300">
               <Sparkles size={13} className="text-amber-500" />
               {t.common.appTagline}
             </span>
@@ -89,25 +89,25 @@ function HomePage() {
 
           <motion.h1
             variants={itemVariants}
-            className="font-display mt-8 text-5xl leading-[1.1] tracking-tight text-slate-900 md:text-7xl lg:text-8xl dark:text-white"
+            className="font-display mt-6 text-4xl leading-[1.1] tracking-tight text-slate-900 sm:mt-8 sm:text-5xl md:text-7xl lg:text-8xl dark:text-white"
           >
             {t.home.hero.title}
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
-            className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400"
+            className="mx-auto mt-4 max-w-xl px-2 text-sm leading-relaxed text-slate-500 sm:mt-6 sm:px-0 sm:text-base md:text-lg dark:text-slate-400"
           >
             {t.home.hero.subtitle}
           </motion.p>
 
           <motion.div
             variants={itemVariants}
-            className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            className="mt-8 flex flex-col items-center justify-center gap-3 sm:mt-10 sm:flex-row"
           >
             <Link
               to="/practice"
-              className="group inline-flex items-center gap-2.5 rounded-full bg-slate-900 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all duration-300 hover:scale-[1.02] hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/25 active:scale-[0.98] dark:bg-white dark:text-slate-900 dark:shadow-white/10 dark:hover:bg-slate-100"
+              className="group inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-slate-900 px-7 py-3.5 text-sm font-semibold text-white shadow-lg shadow-slate-900/20 transition-all duration-300 hover:scale-[1.02] hover:bg-slate-800 hover:shadow-xl hover:shadow-slate-900/25 active:scale-[0.98] sm:w-auto dark:bg-white dark:text-slate-900 dark:shadow-white/10 dark:hover:bg-slate-100"
             >
               <Mic size={17} />
               {t.home.hero.ctaPractice}
@@ -118,7 +118,7 @@ function HomePage() {
             </Link>
             <Link
               to="/analysis"
-              className="inline-flex items-center gap-2.5 rounded-full border border-slate-200 bg-white/70 px-7 py-3.5 text-sm font-semibold text-slate-700 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:border-slate-300 hover:bg-white hover:shadow-md active:scale-[0.98] dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
+              className="inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-slate-200 bg-white/70 px-7 py-3.5 text-sm font-semibold text-slate-700 backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:border-slate-300 hover:bg-white hover:shadow-md active:scale-[0.98] sm:w-auto dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-800"
             >
               <Brain size={17} />
               {t.nav.analysis}
@@ -128,7 +128,7 @@ function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="relative px-6 pb-24">
+      <section className="relative px-4 pb-16 sm:px-6 sm:pb-24">
         <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 md:grid-cols-3">
           {features.map((feature, index) => (
             <motion.div

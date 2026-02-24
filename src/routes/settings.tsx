@@ -8,6 +8,7 @@ import { setStoredProvider } from '#/lib/ai/storage'
 import { testProviderConnection } from '#/lib/ai/client'
 import type { ProviderConfig } from '#/lib/ai/providers'
 import { appStore, setTheme, type AppTheme } from '#/lib/store/app-store'
+import { PageTransition, PageSection } from '#/components/ui/page-transition'
 
 export const Route = createFileRoute('/settings')({ component: SettingsPage })
 
@@ -74,10 +75,12 @@ function SettingsPage() {
   ]
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
-      <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t.settings.title}</h1>
+    <PageTransition className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+      <PageSection>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t.settings.title}</h1>
+      </PageSection>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+      <PageSection className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
         <h2 className="font-semibold text-slate-900 dark:text-slate-100">{t.settings.language.title}</h2>
         <div className="mt-3 flex gap-3">
           <button
@@ -101,9 +104,9 @@ function SettingsPage() {
             {t.settings.language.en}
           </button>
         </div>
-      </section>
+      </PageSection>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+      <PageSection className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
         <h2 className="font-semibold text-slate-900 dark:text-slate-100">{locale === 'zh' ? '外观主题' : 'Appearance'}</h2>
         <div className="mt-3 flex flex-wrap gap-2">
           {themeOptions.map((opt) => (
@@ -121,9 +124,9 @@ function SettingsPage() {
             </button>
           ))}
         </div>
-      </section>
+      </PageSection>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+      <PageSection className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
         <div>
           <h2 className="font-semibold text-slate-900 dark:text-slate-100">{t.settings.provider.title}</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{t.settings.provider.desc}</p>
@@ -246,7 +249,7 @@ function SettingsPage() {
             {testMessage}
           </div>
         )}
-      </section>
-    </div>
+      </PageSection>
+    </PageTransition>
   )
 }
