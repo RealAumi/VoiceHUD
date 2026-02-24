@@ -72,7 +72,7 @@ function PracticePage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-4 sm:flex-wrap sm:flex-row sm:items-center">
+        <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
           <button
             onClick={isActive ? stop : start}
             className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-medium transition-colors ${
