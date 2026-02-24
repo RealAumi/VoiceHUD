@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Home, Menu, X, Mic, Brain, BookOpen, Settings, AudioWaveform } from 'lucide-react'
 import { useI18n } from '#/lib/i18n'
+import { AnimatePresence, motion } from 'motion/react'
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false)
@@ -17,7 +18,12 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85">
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur dark:border-slate-800 dark:bg-slate-950/85"
+      >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
             <button
@@ -59,9 +65,20 @@ export default function Header() {
             {locale === 'zh' ? 'EN' : '中'}
           </button>
         </div>
-      </header>
+      </motion.header>
 
-      {isOpen && <div className="fixed inset-0 z-50 bg-black/30 lg:hidden" onClick={() => setIsOpen(false)} />}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 bg-black/30 lg:hidden"
+            onClick={() => setIsOpen(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <aside
         className={`fixed top-0 left-0 z-50 flex h-full w-72 transform flex-col border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-950 lg:hidden ${
