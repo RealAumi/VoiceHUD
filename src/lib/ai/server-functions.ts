@@ -25,6 +25,7 @@ interface ConversationTurn {
 
 interface AnalyzeVoiceRequestInput extends ProviderRequestInput {
   conversation: ConversationTurn[]
+  customPrompt: string
   audio: {
     base64: string
     mediaType: string
@@ -97,6 +98,7 @@ function parseAnalyzeVoiceInput(input: unknown): AnalyzeVoiceRequestInput {
   return {
     ...provider,
     conversation,
+    customPrompt: asString(data.customPrompt).trim(),
     audio: {
       base64: asString(audioData.base64).trim(),
       mediaType: asString(audioData.mediaType).trim().toLowerCase(),
@@ -297,39 +299,42 @@ export const analyzeVoiceServerFn = createServerFn({ method: 'POST' })
       return { text: '', error: validationResult.message }
     }
 
-    const estimatedSize = data.audio.size > 0 ? data.audio.size : estimateBase64Size(data.audio.base64)
-    if (estimatedSize <= 0) {
-      return {
-        text: '',
-        error: localize(data.locale, '音频数据为空，请重新上传或录制', 'Audio payload is empty. Please record or upload again.'),
-      }
-    }
-
-    if (estimatedSize > MAX_AUDIO_UPLOAD_BYTES) {
-      return {
-        text: '',
-        error: localize(
-          data.locale,
-          '音频文件过大，最大支持 20MB',
-          'Audio file is too large. Maximum supported size is 20MB.'
-        ),
-      }
-    }
-
+    const hasAudio = data.audio.base64.length > 0
     const mediaType = data.audio.mediaType || 'audio/webm'
-    if (!mediaType.startsWith('audio/')) {
+
+    if (hasAudio) {
+      const estimatedSize = data.audio.size > 0 ? data.audio.size : estimateBase64Size(data.audio.base64)
+
+      if (estimatedSize > MAX_AUDIO_UPLOAD_BYTES) {
+        return {
+          text: '',
+          error: localize(
+            data.locale,
+            '音频文件过大，最大支持 20MB',
+            'Audio file is too large. Maximum supported size is 20MB.'
+          ),
+        }
+      }
+
+      if (!mediaType.startsWith('audio/')) {
+        return {
+          text: '',
+          error: localize(
+            data.locale,
+            '音频 MIME 类型无效，请上传标准音频文件',
+            'Invalid audio MIME type. Please upload a supported audio file.'
+          ),
+        }
+      }
+    } else if (data.conversation.length === 0) {
       return {
         text: '',
-        error: localize(
-          data.locale,
-          '音频 MIME 类型无效，请上传标准音频文件',
-          'Invalid audio MIME type. Please upload a supported audio file.'
-        ),
+        error: localize(data.locale, '请提供音频或文字消息', 'Please provide audio or a text message.'),
       }
     }
 
     try {
-      const prompt = getVoiceAnalysisPrompt(data.locale)
+      const prompt = data.customPrompt || getVoiceAnalysisPrompt(data.locale)
       let text = ''
 
       await tryGenerateWithFallbacks(data, async (model) => {
@@ -338,30 +343,44 @@ export const analyzeVoiceServerFn = createServerFn({ method: 'POST' })
           content: turn.content,
         }))
 
+        const userParts: Array<{ type: 'text'; text: string } | { type: 'file'; data: string; mediaType: string }> = []
+
+        if (data.audio.base64) {
+          userParts.push(
+            {
+              type: 'text',
+              text:
+                data.locale === 'zh'
+                  ? `${prompt}\n\n请结合此前多轮对话上下文继续给出建议，保持和上一次建议连贯。`
+                  : `${prompt}\n\nContinue from previous turns and keep the coaching suggestions coherent with prior feedback.`,
+            },
+            {
+              type: 'file',
+              data: data.audio.base64,
+              mediaType,
+            }
+          )
+        } else {
+          userParts.push({
+            type: 'text',
+            text:
+              data.locale === 'zh'
+                ? `${prompt}\n\n请结合此前多轮对话上下文继续给出建议，保持和上一次建议连贯。`
+                : `${prompt}\n\nContinue from previous turns and keep the coaching suggestions coherent with prior feedback.`,
+          })
+        }
+
         const result = await generateText({
           model,
           messages: [
             ...history,
             {
               role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text:
-                    data.locale === 'zh'
-                      ? `${prompt}\n\n请结合此前多轮对话上下文继续给出建议，保持和上一次建议连贯。`
-                      : `${prompt}\n\nContinue from previous turns and keep the coaching suggestions coherent with prior feedback.`,
-                },
-                {
-                  type: 'file',
-                  data: data.audio.base64,
-                  mediaType,
-                },
-              ],
+              content: userParts,
             },
           ],
           temperature: 0.7,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
         })
 
         text = result.text

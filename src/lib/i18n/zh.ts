@@ -77,6 +77,13 @@ export const zh = {
     result: '分析结果',
     noApiKey: '请先在设置中配置 AI 接入点',
     goToSettings: '前往设置',
+    emptyChat: '还没有历史分析，录一段音频或输入文字开始对话。',
+    contextNote: '提示：模型请求会携带最近 12 条对话上下文。',
+    customPrompt: '自定义提示词',
+    customPromptPlaceholder: '输入自定义系统提示词，以个性化 AI 分析...',
+    customPromptHint: '留空则使用默认声音分析提示词。',
+    customPromptSaved: '提示词已保存',
+    audioAttached: '已附带语音录音',
   },
   training: {
     title: '训练计划',
