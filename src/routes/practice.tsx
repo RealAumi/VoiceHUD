@@ -6,6 +6,7 @@ import { useAudioInput } from '#/hooks/useAudioInput'
 import { usePitchDetection } from '#/hooks/usePitchDetection'
 import { VoiceHUD } from '#/components/audio/VoiceHUD'
 import { PITCH_DISPLAY, PITCH_RANGES, type PitchRangeKey } from '#/lib/audio/constants'
+import { PageTransition, PageSection } from '#/components/ui/page-transition'
 
 export const Route = createFileRoute('/practice')({ component: PracticePage })
 
@@ -45,8 +46,8 @@ function PracticePage() {
   }, [pitchMin, pitchMax])
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6">
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+    <PageTransition className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+      <PageSection className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t.practice.title}</h1>
@@ -71,10 +72,10 @@ function PracticePage() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-4">
+        <div className="mt-4 flex flex-col gap-4 sm:flex-wrap sm:flex-row sm:items-center">
           <button
             onClick={isActive ? stop : start}
-            className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 font-medium transition-colors ${
+            className={`inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-medium transition-colors ${
               isActive
                 ? 'border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300'
                 : 'bg-slate-900 text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200'
@@ -119,20 +120,22 @@ function PracticePage() {
             <span className="text-sm">{error}</span>
           </div>
         )}
-      </div>
+      </PageSection>
 
-      <details className="group rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-        <summary className="flex cursor-pointer list-none items-center justify-between text-slate-700 dark:text-slate-300">
-          <span>{locale === 'zh' ? '练习说明（默认折叠）' : 'Practice tips (collapsed by default)'}</span>
-          <ChevronDown size={16} className="transition-transform group-open:rotate-180" />
-        </summary>
-        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-slate-600 dark:text-slate-400">
-          <li>{locale === 'zh' ? '优先看左侧大 Pitch 图，让轨迹更平稳。' : 'Prioritize stabilizing the large pitch trace on the left.'}</li>
-          <li>{locale === 'zh' ? '目标是让曲线更多时间待在目标音域高亮区。' : 'Keep the trace within the highlighted target band as long as possible.'}</li>
-          <li>{locale === 'zh' ? '右侧 Formants 观察共振变化，频谱图观察噪声/紧张迹象。' : 'Use Formants for resonance placement and Spectrogram for strain/noise clues.'}</li>
-          <li>{locale === 'zh' ? '停止发声后共振峰会保留虚影，方便回顾。' : 'Formant ghost bars persist after you stop speaking for easy review.'}</li>
-        </ul>
-      </details>
+      <PageSection>
+        <details className="group rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+          <summary className="flex cursor-pointer list-none items-center justify-between text-slate-700 dark:text-slate-300">
+            <span>{locale === 'zh' ? '练习说明（默认折叠）' : 'Practice tips (collapsed by default)'}</span>
+            <ChevronDown size={16} className="transition-transform group-open:rotate-180" />
+          </summary>
+          <ul className="mt-3 list-disc space-y-1.5 pl-5 text-slate-600 dark:text-slate-400">
+            <li>{locale === 'zh' ? '优先看左侧大 Pitch 图，让轨迹更平稳。' : 'Prioritize stabilizing the large pitch trace on the left.'}</li>
+            <li>{locale === 'zh' ? '目标是让曲线更多时间待在目标音域高亮区。' : 'Keep the trace within the highlighted target band as long as possible.'}</li>
+            <li>{locale === 'zh' ? '右侧 Formants 观察共振变化，频谱图观察噪声/紧张迹象。' : 'Use Formants for resonance placement and Spectrogram for strain/noise clues.'}</li>
+            <li>{locale === 'zh' ? '停止发声后共振峰会保留虚影，方便回顾。' : 'Formant ghost bars persist after you stop speaking for easy review.'}</li>
+          </ul>
+        </details>
+      </PageSection>
 
       {!isActive && !error && !hasSnapshot && (
         <p className="py-8 text-center text-sm text-slate-500 dark:text-slate-400">{t.practice.micPermission}</p>
@@ -151,6 +154,6 @@ function PracticePage() {
       )}
 
       {isActive && !data.voiced && <p className="animate-pulse text-center text-sm text-slate-500 dark:text-slate-400">{t.practice.noSignal}</p>}
-    </div>
+    </PageTransition>
   )
 }

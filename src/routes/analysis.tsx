@@ -21,6 +21,7 @@ import { AIConversation, AIMessage } from '#/components/ui/ai-elements'
 import { ChatInput } from '#/components/audio/ChatInput'
 import { deleteAudioBlob, saveAudioBlob } from '#/lib/audio/audio-storage'
 import { useVoiceRecorder } from '#/hooks/useVoiceRecorder'
+import { motion } from 'motion/react'
 
 export const Route = createFileRoute('/analysis')({ component: AnalysisPage })
 
@@ -252,7 +253,12 @@ function AnalysisPage() {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-57px)] max-w-6xl flex-col lg:grid lg:grid-cols-[260px_1fr] lg:gap-4 lg:px-4 lg:py-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] }}
+      className="mx-auto flex h-[calc(100vh-57px)] max-w-6xl flex-col lg:grid lg:grid-cols-[260px_1fr] lg:gap-4 lg:px-4 lg:py-6"
+    >
       {/* Mobile header bar */}
       <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900/70 lg:hidden">
         <button
@@ -310,7 +316,12 @@ function AnalysisPage() {
       )}
 
       {/* Desktop sidebar */}
-      <aside className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 lg:block">
+      <motion.aside
+        initial={{ opacity: 0, x: -16 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.4, delay: 0.1, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 lg:block"
+      >
         <button
           onClick={handleCreateSession}
           className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
@@ -375,10 +386,15 @@ function AnalysisPage() {
             </div>
           )}
         </div>
-      </aside>
+      </motion.aside>
 
       {/* Main chat area */}
-      <section className="flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:dark:border-slate-800 lg:dark:bg-slate-900/70">
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.15, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:dark:border-slate-800 lg:dark:bg-slate-900/70"
+      >
         {/* Chat header */}
         <div className="hidden items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-slate-700 lg:flex">
           <div>
@@ -479,7 +495,7 @@ function AnalysisPage() {
           disabled={!configured || !activeSession}
           isAnalyzing={isAnalyzing}
         />
-      </section>
-    </div>
+      </motion.section>
+    </motion.div>
   )
 }
