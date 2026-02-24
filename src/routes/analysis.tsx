@@ -1,12 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, KeyRound, Plus, Trash2 } from 'lucide-react'
+import { AlertCircle, KeyRound, Plus, Trash2, Settings2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useStore } from '@tanstack/react-store'
 import { useI18n } from '#/lib/i18n'
-import { useVoiceRecorder } from '#/hooks/useVoiceRecorder'
-import { AudioRecorder, AnalyzeButton } from '#/components/audio/AudioRecorder'
 import { analyzeVoice, type ConversationTurn } from '#/lib/ai/client'
-import { appStore } from '#/lib/store/app-store'
+import { appStore, setCustomPrompt } from '#/lib/store/app-store'
 import {
   createSession,
   deleteSession,
@@ -20,24 +18,54 @@ import {
   type SessionMessage,
 } from '#/lib/ai/sessions'
 import { AIConversation, AIMessage } from '#/components/ui/ai-elements'
+import { ChatInput } from '#/components/audio/ChatInput'
+import { deleteAudioBlob, saveAudioBlob } from '#/lib/audio/audio-storage'
+import { useVoiceRecorder } from '#/hooks/useVoiceRecorder'
 
 export const Route = createFileRoute('/analysis')({ component: AnalysisPage })
+
+function createAudioMessageId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `audio_${crypto.randomUUID()}`
+  }
+
+  return `audio_${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`
+}
+
+function getAudioMessageIds(sessionId: string): string[] {
+  const ids = new Set<string>()
+  for (const message of getSessionMessages(sessionId)) {
+    if (message.audioId) ids.add(message.audioId)
+  }
+  return [...ids]
+}
 
 function AnalysisPage() {
   const { t, locale } = useI18n()
   const recorder = useVoiceRecorder()
   const config = useStore(appStore, (s) => s.provider)
+  const customPrompt = useStore(appStore, (s) => s.customPrompt)
 
   const [sessions, setSessions] = useState<AnalysisSession[]>([])
   const [activeSessionId, setActiveSession] = useState<string | null>(null)
   const [messages, setMessages] = useState<SessionMessage[]>([])
   const [analysisError, setAnalysisError] = useState<string>('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [showSidebar, setShowSidebar] = useState(false)
+  const [showPromptEditor, setShowPromptEditor] = useState(false)
+  const [promptDraft, setPromptDraft] = useState(customPrompt)
+  const [promptSaved, setPromptSaved] = useState(false)
+
+  useEffect(() => {
+    setPromptDraft(customPrompt)
+  }, [customPrompt])
 
   const activeSessionIdRef = useRef<string | null>(null)
   useEffect(() => {
     activeSessionIdRef.current = activeSessionId
   }, [activeSessionId])
+
+  const handleSendAudioRef = useRef<(blob: Blob) => Promise<void>>(async () => {})
 
   const configured = config.apiKey.trim().length > 0
 
@@ -72,6 +100,7 @@ function AnalysisPage() {
     setActiveSessionId(sessionId)
     setMessages(getSessionMessages(sessionId))
     setAnalysisError('')
+    setShowSidebar(false)
   }
 
   const getNextSessionNumber = () => {
@@ -93,7 +122,10 @@ function AnalysisPage() {
     switchSession(session.id)
   }
 
-  const handleDeleteSession = (sessionId: string) => {
+  const handleDeleteSession = async (sessionId: string) => {
+    const audioIds = getAudioMessageIds(sessionId)
+    await Promise.all(audioIds.map((audioId) => deleteAudioBlob(audioId)))
+
     deleteSession(sessionId)
     const remaining = listSessions()
     setSessions(remaining)
@@ -106,22 +138,34 @@ function AnalysisPage() {
     }
   }
 
-  const handleAnalyze = async () => {
-    if (!recorder.audioBlob || !activeSessionId) return
+  const handleSendAudio = async (audioBlob: Blob) => {
+    if (!activeSessionId) return
 
     const requestSessionId = activeSessionId
     setIsAnalyzing(true)
     setAnalysisError('')
 
-    const history = getSessionMessages(requestSessionId)
-    const historyTurns: ConversationTurn[] = history.map((item) => ({ role: item.role, content: item.content }))
+    // Save audio to IndexedDB
+    const audioMsgId = createAudioMessageId()
+    await saveAudioBlob(audioMsgId, audioBlob)
 
     const userPrompt =
       locale === 'zh'
-        ? '请继续分析我这次录音，并给出下一步训练建议。'
-        : 'Please analyze this recording and suggest the next training steps.'
+        ? '请分析我这次录音，并给出训练建议。'
+        : 'Please analyze this recording and suggest training steps.'
 
-    const result = await analyzeVoice(recorder.audioBlob, config, locale, historyTurns)
+    // Push user message with audio reference
+    pushSessionMessage(requestSessionId, 'user', userPrompt, audioMsgId)
+
+    // Update messages immediately to show user message
+    if (activeSessionIdRef.current === requestSessionId) {
+      setMessages(getSessionMessages(requestSessionId))
+    }
+
+    const history = getSessionMessages(requestSessionId)
+    const historyTurns: ConversationTurn[] = history.map((item) => ({ role: item.role, content: item.content }))
+
+    const result = await analyzeVoice(audioBlob, config, locale, historyTurns, customPrompt)
 
     const latestSessions = listSessions()
     const stillExists = latestSessions.some((s) => s.id === requestSessionId)
@@ -132,24 +176,141 @@ function AnalysisPage() {
 
     if (result.error) {
       setAnalysisError(result.error)
-      if (activeSessionIdRef.current === requestSessionId) {
-        setMessages(getSessionMessages(requestSessionId))
-      }
     } else {
-      pushSessionMessage(requestSessionId, 'user', userPrompt)
       pushSessionMessage(requestSessionId, 'assistant', result.text)
       refreshSessions()
-      if (activeSessionIdRef.current === requestSessionId) {
-        setMessages(getSessionMessages(requestSessionId))
-      }
     }
 
+    if (activeSessionIdRef.current === requestSessionId) {
+      setMessages(getSessionMessages(requestSessionId))
+    }
     setIsAnalyzing(false)
   }
 
+  useEffect(() => {
+    handleSendAudioRef.current = handleSendAudio
+  }, [handleSendAudio])
+
+  const handleSendText = async (text: string) => {
+    if (!activeSessionId) return
+
+    const requestSessionId = activeSessionId
+    setIsAnalyzing(true)
+    setAnalysisError('')
+
+    pushSessionMessage(requestSessionId, 'user', text)
+    if (activeSessionIdRef.current === requestSessionId) {
+      setMessages(getSessionMessages(requestSessionId))
+    }
+
+    const history = getSessionMessages(requestSessionId)
+    const historyTurns: ConversationTurn[] = history.map((item) => ({ role: item.role, content: item.content }))
+
+    const result = await analyzeVoice(null, config, locale, historyTurns, customPrompt)
+
+    const latestSessions = listSessions()
+    const stillExists = latestSessions.some((s) => s.id === requestSessionId)
+    if (!stillExists) {
+      setIsAnalyzing(false)
+      return
+    }
+
+    if (result.error) {
+      setAnalysisError(result.error)
+    } else {
+      pushSessionMessage(requestSessionId, 'assistant', result.text)
+      refreshSessions()
+    }
+
+    if (activeSessionIdRef.current === requestSessionId) {
+      setMessages(getSessionMessages(requestSessionId))
+    }
+    setIsAnalyzing(false)
+  }
+
+  const handleUploadAudio = (file: File) => {
+    recorder.loadAudioFile(file)
+  }
+
+  // When file is loaded via upload, send it
+  const prevBlobRef = useRef<Blob | null>(null)
+  useEffect(() => {
+    if (recorder.audioBlob && recorder.audioBlob !== prevBlobRef.current && !recorder.isRecording) {
+      prevBlobRef.current = recorder.audioBlob
+      const blob = recorder.audioBlob
+      void (async () => {
+        await handleSendAudioRef.current(blob)
+        recorder.clearRecording()
+      })()
+    }
+  }, [recorder.audioBlob, recorder.isRecording, recorder.clearRecording])
+
+  const handleSavePrompt = () => {
+    setCustomPrompt(promptDraft)
+    setPromptSaved(true)
+    setTimeout(() => setPromptSaved(false), 2000)
+  }
+
   return (
-    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 py-6 lg:grid-cols-[260px_1fr]">
-      <aside className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
+    <div className="mx-auto flex h-[calc(100vh-57px)] max-w-6xl flex-col lg:grid lg:grid-cols-[260px_1fr] lg:gap-4 lg:px-4 lg:py-6">
+      {/* Mobile header bar */}
+      <div className="flex items-center gap-2 border-b border-slate-200 bg-white px-4 py-2 dark:border-slate-800 dark:bg-slate-900/70 lg:hidden">
+        <button
+          onClick={() => setShowSidebar(!showSidebar)}
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          {activeSession?.title ?? t.analysis.title}
+          {showSidebar ? <ChevronUp size={14} className="ml-1 inline" /> : <ChevronDown size={14} className="ml-1 inline" />}
+        </button>
+        <div className="flex-1" />
+        <button
+          onClick={() => setShowPromptEditor(!showPromptEditor)}
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          aria-label={t.analysis.customPrompt}
+        >
+          <Settings2 size={16} />
+        </button>
+      </div>
+
+      {/* Mobile sidebar dropdown */}
+      {showSidebar && (
+        <div className="border-b border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900/70 lg:hidden">
+          <button
+            onClick={handleCreateSession}
+            className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+          >
+            <Plus size={16} /> {locale === 'zh' ? '新建会话' : 'New Session'}
+          </button>
+          <div className="max-h-48 space-y-1 overflow-y-auto">
+            {sessions.map((session) => (
+              <div
+                key={session.id}
+                className={`group flex items-center justify-between rounded-lg px-3 py-2 text-sm ${
+                  session.id === activeSessionId
+                    ? 'bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900'
+                    : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                }`}
+              >
+                <button className="min-w-0 flex-1 truncate text-left" onClick={() => switchSession(session.id)}>
+                  {session.title}
+                </button>
+                <button
+                  onClick={() => {
+                    void handleDeleteSession(session.id)
+                  }}
+                  aria-label={locale === 'zh' ? `删除会话：${session.title}` : `Delete session: ${session.title}`}
+                  className="ml-2 rounded p-1 opacity-60 hover:opacity-100"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <aside className="hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900/70 lg:block">
         <button
           onClick={handleCreateSession}
           className="mb-3 flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
@@ -171,7 +332,9 @@ function AnalysisPage() {
                 {session.title}
               </button>
               <button
-                onClick={() => handleDeleteSession(session.id)}
+                onClick={() => {
+                  void handleDeleteSession(session.id)
+                }}
                 aria-label={locale === 'zh' ? `删除会话：${session.title}` : `Delete session: ${session.title}`}
                 className={`ml-2 rounded p-1 ${
                   session.id === activeSessionId ? 'hover:bg-white/20 dark:hover:bg-slate-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -182,88 +345,140 @@ function AnalysisPage() {
             </div>
           ))}
         </div>
+
+        {/* Custom prompt editor (desktop) */}
+        <div className="mt-4 border-t border-slate-200 pt-3 dark:border-slate-700">
+          <button
+            onClick={() => setShowPromptEditor(!showPromptEditor)}
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"
+          >
+            <Settings2 size={14} />
+            {t.analysis.customPrompt}
+            {showPromptEditor ? <ChevronUp size={12} className="ml-auto" /> : <ChevronDown size={12} className="ml-auto" />}
+          </button>
+          {showPromptEditor && (
+            <div className="mt-2 space-y-2">
+              <textarea
+                value={promptDraft}
+                onChange={(e) => setPromptDraft(e.target.value)}
+                placeholder={t.analysis.customPromptPlaceholder}
+                rows={4}
+                className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:placeholder-slate-500"
+              />
+              <p className="text-[10px] text-slate-400 dark:text-slate-500">{t.analysis.customPromptHint}</p>
+              <button
+                onClick={handleSavePrompt}
+                className="w-full rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+              >
+                {promptSaved ? t.analysis.customPromptSaved : t.common.save}
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
 
-      <section className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-          <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t.analysis.title}</h1>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{t.analysis.recordPrompt}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t.analysis.securityNotice}</p>
+      {/* Main chat area */}
+      <section className="flex min-h-0 flex-1 flex-col overflow-hidden lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white lg:shadow-sm lg:dark:border-slate-800 lg:dark:bg-slate-900/70">
+        {/* Chat header */}
+        <div className="hidden items-center justify-between border-b border-slate-200 px-5 py-3 dark:border-slate-700 lg:flex">
+          <div>
+            <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              {activeSession?.title ?? t.analysis.title}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t.analysis.securityNotice}</p>
+          </div>
         </div>
 
+        {/* Mobile prompt editor */}
+        {showPromptEditor && (
+          <div className="border-b border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900/70 lg:hidden">
+            <p className="mb-1 text-xs font-medium text-slate-600 dark:text-slate-400">{t.analysis.customPrompt}</p>
+            <textarea
+              value={promptDraft}
+              onChange={(e) => setPromptDraft(e.target.value)}
+              placeholder={t.analysis.customPromptPlaceholder}
+              rows={3}
+              className="w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 placeholder-slate-400 outline-none focus:border-teal-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:placeholder-slate-500"
+            />
+            <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">{t.analysis.customPromptHint}</p>
+            <button
+              onClick={handleSavePrompt}
+              className="mt-2 w-full rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
+            >
+              {promptSaved ? t.analysis.customPromptSaved : t.common.save}
+            </button>
+          </div>
+        )}
+
+        {/* API key warning */}
         {!configured && (
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
-            <div className="flex items-center gap-3">
-              <KeyRound size={20} />
-              <span className="text-sm">{t.analysis.noApiKey}</span>
+          <div className="mx-4 mt-3 flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+            <div className="flex items-center gap-2">
+              <KeyRound size={16} />
+              <span className="text-xs">{t.analysis.noApiKey}</span>
             </div>
-            <Link to="/settings" className="rounded-lg border border-amber-300 bg-white px-3 py-1 text-sm dark:border-amber-500/40 dark:bg-slate-900">
+            <Link to="/settings" className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1 text-xs dark:border-amber-500/40 dark:bg-slate-900">
               {t.analysis.goToSettings}
             </Link>
           </div>
         )}
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-          <AudioRecorder
-            isRecording={recorder.isRecording}
-            duration={recorder.duration}
-            audioBlob={recorder.audioBlob}
-            onStartRecording={recorder.startRecording}
-            onStopRecording={recorder.stopRecording}
-            onUpload={recorder.loadAudioFile}
-            onClear={recorder.clearRecording}
-          />
-
-          {recorder.error && (
-            <div className="mt-3 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-              <AlertCircle size={16} />
-              {recorder.error}
-            </div>
-          )}
-
-          {recorder.audioBlob && !recorder.isRecording && (
-            <div className="mt-4">
-              <AnalyzeButton
-                onClick={handleAnalyze}
-                isAnalyzing={isAnalyzing}
-                disabled={!configured || !activeSession}
-                label={isAnalyzing ? t.analysis.analyzing : t.analysis.analyzeButton}
-              />
-            </div>
-          )}
-
-          {analysisError && (
-            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
-              {analysisError}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/70">
-          <h3 className="mb-3 text-base font-semibold text-slate-900 dark:text-slate-100">{activeSession?.title ?? t.analysis.result}</h3>
-          <AIConversation messageCount={messages.length}>
-            {messages.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-                {locale === 'zh'
-                  ? '还没有历史分析，先录一段音频开启会话。'
-                  : 'No analysis history yet. Record a clip to start this session.'}
+        {/* Messages area */}
+        <AIConversation messageCount={messages.length}>
+          {messages.length === 0 ? (
+            <div className="flex h-full items-center justify-center">
+              <p className="max-w-xs text-center text-sm text-slate-400 dark:text-slate-500">
+                {t.analysis.emptyChat}
               </p>
-            ) : (
-              messages.map((msg) => (
-                <AIMessage key={msg.id} role={msg.role}>
+            </div>
+          ) : (
+            <>
+              {messages.map((msg) => (
+                <AIMessage key={msg.id} role={msg.role} audioId={msg.audioId}>
                   {msg.content}
                 </AIMessage>
-              ))
-            )}
-          </AIConversation>
-          {messages.length > 12 && (
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-              {locale === 'zh'
-                ? '提示：模型请求会携带最近 12 条对话上下文。'
-                : 'Note: only the latest 12 turns are sent as model context.'}
-            </p>
+              ))}
+              {isAnalyzing && (
+                <div className="flex items-center gap-2 px-4 py-2 text-xs text-slate-400 dark:text-slate-500">
+                  <div className="h-2 w-2 animate-pulse rounded-full bg-teal-500" />
+                  {t.analysis.analyzing}
+                </div>
+              )}
+            </>
           )}
-        </div>
+        </AIConversation>
+
+        {/* Error display */}
+        {analysisError && (
+          <div className="mx-4 mb-2 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+            <AlertCircle size={14} />
+            {analysisError}
+          </div>
+        )}
+
+        {recorder.error && (
+          <div className="mx-4 mb-2 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-300">
+            <AlertCircle size={14} />
+            {recorder.error}
+          </div>
+        )}
+
+        {/* Context note */}
+        {messages.length > 12 && (
+          <p className="px-4 pb-1 text-[10px] text-slate-400 dark:text-slate-500">
+            {t.analysis.contextNote}
+          </p>
+        )}
+
+        {/* Chat input */}
+        <ChatInput
+          onSendAudio={handleSendAudio}
+          onSendText={handleSendText}
+          onUploadAudio={handleUploadAudio}
+          onError={setAnalysisError}
+          disabled={!configured || !activeSession}
+          isAnalyzing={isAnalyzing}
+        />
       </section>
     </div>
   )

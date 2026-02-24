@@ -5,6 +5,8 @@ export interface SessionMessage {
   role: SessionMessageRole
   content: string
   createdAt: number
+  /** When present, this message has an attached audio recording stored in IndexedDB */
+  audioId?: string
 }
 
 export interface AnalysisSession {
@@ -141,13 +143,15 @@ export function getSessionMessages(sessionId: string): SessionMessage[] {
 export function pushSessionMessage(
   sessionId: string,
   role: SessionMessageRole,
-  content: string
+  content: string,
+  audioId?: string
 ): SessionMessage {
   const message: SessionMessage = {
     id: id('msg'),
     role,
     content,
     createdAt: now(),
+    ...(audioId ? { audioId } : {}),
   }
 
   const messages = [...getSessionMessages(sessionId), message]
