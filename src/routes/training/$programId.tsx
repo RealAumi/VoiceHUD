@@ -4,6 +4,8 @@ import { useI18n } from '#/lib/i18n'
 import { getProgramById } from '#/lib/training/programs'
 import { exercises as allExercises } from '#/lib/training/exercises'
 import { ExerciseCard } from '#/components/training/ExerciseCard'
+import { PageTransition, PageSection } from '#/components/ui/page-transition'
+import { motion } from 'motion/react'
 
 export const Route = createFileRoute('/training/$programId')({
   component: ProgramDetailPage,
@@ -34,42 +36,52 @@ function ProgramDetailPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+    <PageTransition className="max-w-3xl mx-auto px-4 py-6 space-y-6">
       {/* Back link */}
-      <Link
-        to="/training"
-        className="flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
-      >
-        <ArrowLeft size={16} />
-        {t.common.back}
-      </Link>
+      <PageSection>
+        <Link
+          to="/training"
+          className="flex items-center gap-2 text-sm text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+        >
+          <ArrowLeft size={16} />
+          {t.common.back}
+        </Link>
+      </PageSection>
 
       {/* Program header */}
-      <div>
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-bold">{program.name[locale]}</h1>
-          <span className={`text-sm font-medium ${diffColors[program.difficulty]}`}>
-            {t.training.difficulty[program.difficulty]}
-          </span>
+      <PageSection>
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{program.name[locale]}</h1>
+            <span className={`text-sm font-medium ${diffColors[program.difficulty]}`}>
+              {t.training.difficulty[program.difficulty]}
+            </span>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400">{program.description[locale]}</p>
+          <div className="flex items-center gap-4 mt-3 text-sm text-slate-500">
+            <span>{program.durationWeeks} {locale === 'zh' ? '周' : 'weeks'}</span>
+            <span>{program.dailyMinutes} min/{locale === 'zh' ? '天' : 'day'}</span>
+          </div>
         </div>
-        <p className="text-slate-400">{program.description[locale]}</p>
-        <div className="flex items-center gap-4 mt-3 text-sm text-slate-500">
-          <span>{program.durationWeeks} {locale === 'zh' ? '周' : 'weeks'}</span>
-          <span>{program.dailyMinutes} min/{locale === 'zh' ? '天' : 'day'}</span>
-        </div>
-      </div>
+      </PageSection>
 
       {/* Daily schedule */}
       <section className="space-y-6">
-        {program.schedule.map((day) => {
+        {program.schedule.map((day, dayIndex) => {
           const dayExercises = day.exerciseIds
             .map((id) => allExercises.find((e) => e.id === id))
             .filter(Boolean) as typeof allExercises
 
           return (
-            <div key={day.day} className="space-y-3">
+            <motion.div
+              key={day.day}
+              className="space-y-3"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, delay: 0.2 + dayIndex * 0.08, ease: [0.25, 0.46, 0.45, 0.94] }}
+            >
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 text-cyan-400">
+                <div className="flex items-center gap-2 text-cyan-600 dark:text-cyan-400">
                   <Calendar size={16} />
                   <span className="font-medium">
                     {locale === 'zh' ? `第 ${day.day} 天` : `Day ${day.day}`}
@@ -78,15 +90,15 @@ function ProgramDetailPage() {
                 <span className="text-sm text-slate-500">{day.focus[locale]}</span>
               </div>
 
-              <div className="space-y-2 pl-2 border-l-2 border-slate-800">
+              <div className="space-y-2 pl-2 border-l-2 border-slate-200 dark:border-slate-800">
                 {dayExercises.map((exercise) => (
                   <ExerciseCard key={exercise.id} exercise={exercise} />
                 ))}
               </div>
-            </div>
+            </motion.div>
           )
         })}
       </section>
-    </div>
+    </PageTransition>
   )
 }

@@ -6,9 +6,13 @@
 
 body {
   @apply m-0;
-  font-family: 'Avenir Next', 'IBM Plex Sans', 'Segoe UI', sans-serif;
+  font-family: 'DM Sans', 'Avenir Next', 'IBM Plex Sans', 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+.font-display {
+  font-family: 'Instrument Serif', Georgia, serif;
 }
 
 code {
