@@ -1,5 +1,19 @@
 import { useMemo, type ReactNode } from 'react'
 
+const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+
+function sanitizeLinkUrl(rawUrl: string): string | null {
+  const trimmed = rawUrl.trim()
+  if (!trimmed) return null
+
+  try {
+    const parsed = new URL(trimmed)
+    return SAFE_LINK_PROTOCOLS.has(parsed.protocol) ? parsed.toString() : null
+  } catch {
+    return null
+  }
+}
+
 function parseInline(text: string): ReactNode[] {
   const nodes: ReactNode[] = []
   let remaining = text
@@ -37,12 +51,17 @@ function parseInline(text: string): ReactNode[] {
     // Link: [text](url)
     const linkMatch = remaining.match(/^\[([^\]]+?)\]\(([^)]+?)\)/)
     if (linkMatch) {
-      nodes.push(
-        <a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
-          className="text-cyan-600 underline decoration-cyan-600/30 hover:decoration-cyan-600 dark:text-cyan-400 dark:decoration-cyan-400/30 dark:hover:decoration-cyan-400">
-          {parseInline(linkMatch[1])}
-        </a>
-      )
+      const safeHref = sanitizeLinkUrl(linkMatch[2])
+      if (safeHref) {
+        nodes.push(
+          <a key={key++} href={safeHref} target="_blank" rel="noopener noreferrer"
+            className="text-cyan-600 underline decoration-cyan-600/30 hover:decoration-cyan-600 dark:text-cyan-400 dark:decoration-cyan-400/30 dark:hover:decoration-cyan-400">
+            {parseInline(linkMatch[1])}
+          </a>
+        )
+      } else {
+        nodes.push(<span key={key++}>{parseInline(linkMatch[1])}</span>)
+      }
       remaining = remaining.slice(linkMatch[0].length)
       continue
     }
