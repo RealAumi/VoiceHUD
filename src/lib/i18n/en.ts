@@ -77,6 +77,13 @@ export const en = {
     result: 'Analysis Result',
     noApiKey: 'Please configure an AI provider in Settings first',
     goToSettings: 'Go to Settings',
+    emptyChat: 'No analysis history yet. Record a voice clip or type a message to start.',
+    contextNote: 'Note: only the latest 12 turns are sent as model context.',
+    customPrompt: 'Custom Prompt',
+    customPromptPlaceholder: 'Enter your custom system prompt to personalize the AI analysis...',
+    customPromptHint: 'Leave empty to use the default voice analysis prompt.',
+    customPromptSaved: 'Prompt saved',
+    audioAttached: 'Voice recording attached',
   },
   training: {
     title: 'Training Plans',

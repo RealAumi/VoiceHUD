@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   locale: 'voicehud-locale',
   provider: 'voicehud-ai-provider',
   theme: 'voicehud-theme',
+  customPrompt: 'voicehud-custom-prompt',
 } as const
 
 const DEFAULT_PROVIDER: ProviderConfig = {
@@ -22,6 +23,7 @@ interface AppState {
   locale: AppLocale
   provider: ProviderConfig
   theme: AppTheme
+  customPrompt: string
 }
 
 function loadLocale(): AppLocale {
@@ -56,10 +58,16 @@ function loadTheme(): AppTheme {
   return raw === 'light' || raw === 'dark' || raw === 'system' ? raw : 'system'
 }
 
+function loadCustomPrompt(): string {
+  if (typeof window === 'undefined') return ''
+  return localStorage.getItem(STORAGE_KEYS.customPrompt) ?? ''
+}
+
 export const appStore = new Store<AppState>({
   locale: loadLocale(),
   provider: loadProvider(),
   theme: loadTheme(),
+  customPrompt: loadCustomPrompt(),
 })
 
 export function setLocale(locale: AppLocale) {
@@ -97,4 +105,15 @@ export function getProvider(): ProviderConfig {
 
 export function isProviderConfigured(): boolean {
   return appStore.state.provider.apiKey.trim().length > 0
+}
+
+export function setCustomPrompt(prompt: string) {
+  appStore.setState((s) => ({ ...s, customPrompt: prompt }))
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STORAGE_KEYS.customPrompt, prompt)
+  }
+}
+
+export function getCustomPrompt(): string {
+  return appStore.state.customPrompt
 }

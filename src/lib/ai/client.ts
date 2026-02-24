@@ -87,10 +87,11 @@ export interface ConversationTurn {
 }
 
 export async function analyzeVoice(
-  audioBlob: Blob,
+  audioBlob: Blob | null,
   config: ProviderConfig,
   locale: 'zh' | 'en' = 'zh',
-  conversation: ConversationTurn[] = []
+  conversation: ConversationTurn[] = [],
+  customPrompt = ''
 ): Promise<AnalysisResult> {
   if (!config.apiKey.trim()) {
     return {
@@ -100,16 +101,21 @@ export async function analyzeVoice(
   }
 
   try {
-    const audioBase64 = await blobToBase64(audioBlob)
-    const mediaType = resolveAudioMediaType(audioBlob)
+    let audioBase64 = ''
+    let mediaType = ''
 
-    if (config.id === 'openrouter' && mediaType === 'audio/webm') {
-      return {
-        text: '',
-        error:
-          locale === 'zh'
-            ? 'OpenRouter 当前不支持 WebM 录音。请改用上传 MP3/WAV/M4A/OGG，或在支持 OGG/MP4 录音的浏览器中重试。'
-            : 'OpenRouter does not currently accept WebM recordings. Please upload MP3/WAV/M4A/OGG, or retry in a browser that records OGG/MP4.',
+    if (audioBlob) {
+      audioBase64 = await blobToBase64(audioBlob)
+      mediaType = resolveAudioMediaType(audioBlob)
+
+      if (config.id === 'openrouter' && mediaType === 'audio/webm') {
+        return {
+          text: '',
+          error:
+            locale === 'zh'
+              ? 'OpenRouter 当前不支持 WebM 录音。请改用上传 MP3/WAV/M4A/OGG，或在支持 OGG/MP4 录音的浏览器中重试。'
+              : 'OpenRouter does not currently accept WebM recordings. Please upload MP3/WAV/M4A/OGG, or retry in a browser that records OGG/MP4.',
+        }
       }
     }
 
@@ -122,10 +128,11 @@ export async function analyzeVoice(
         fallbackBaseURLs: config.fallbackBaseURLs,
         locale,
         conversation,
+        customPrompt,
         audio: {
           base64: audioBase64,
           mediaType,
-          size: audioBlob.size,
+          size: audioBlob?.size ?? 0,
         },
       },
     })
