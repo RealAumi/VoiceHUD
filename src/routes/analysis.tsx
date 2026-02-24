@@ -19,10 +19,26 @@ import {
 } from '#/lib/ai/sessions'
 import { AIConversation, AIMessage } from '#/components/ui/ai-elements'
 import { ChatInput } from '#/components/audio/ChatInput'
-import { saveAudioBlob } from '#/lib/audio/audio-storage'
+import { deleteAudioBlob, saveAudioBlob } from '#/lib/audio/audio-storage'
 import { useVoiceRecorder } from '#/hooks/useVoiceRecorder'
 
 export const Route = createFileRoute('/analysis')({ component: AnalysisPage })
+
+function createAudioMessageId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `audio_${crypto.randomUUID()}`
+  }
+
+  return `audio_${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`
+}
+
+function getAudioMessageIds(sessionId: string): string[] {
+  const ids = new Set<string>()
+  for (const message of getSessionMessages(sessionId)) {
+    if (message.audioId) ids.add(message.audioId)
+  }
+  return [...ids]
+}
 
 function AnalysisPage() {
   const { t, locale } = useI18n()
@@ -39,6 +55,10 @@ function AnalysisPage() {
   const [showPromptEditor, setShowPromptEditor] = useState(false)
   const [promptDraft, setPromptDraft] = useState(customPrompt)
   const [promptSaved, setPromptSaved] = useState(false)
+
+  useEffect(() => {
+    setPromptDraft(customPrompt)
+  }, [customPrompt])
 
   const activeSessionIdRef = useRef<string | null>(null)
   useEffect(() => {
@@ -102,7 +122,10 @@ function AnalysisPage() {
     switchSession(session.id)
   }
 
-  const handleDeleteSession = (sessionId: string) => {
+  const handleDeleteSession = async (sessionId: string) => {
+    const audioIds = getAudioMessageIds(sessionId)
+    await Promise.all(audioIds.map((audioId) => deleteAudioBlob(audioId)))
+
     deleteSession(sessionId)
     const remaining = listSessions()
     setSessions(remaining)
@@ -123,7 +146,7 @@ function AnalysisPage() {
     setAnalysisError('')
 
     // Save audio to IndexedDB
-    const audioMsgId = `audio_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    const audioMsgId = createAudioMessageId()
     await saveAudioBlob(audioMsgId, audioBlob)
 
     const userPrompt =
@@ -163,7 +186,10 @@ function AnalysisPage() {
     }
     setIsAnalyzing(false)
   }
-  handleSendAudioRef.current = handleSendAudio
+
+  useEffect(() => {
+    handleSendAudioRef.current = handleSendAudio
+  }, [handleSendAudio])
 
   const handleSendText = async (text: string) => {
     if (!activeSessionId) return
@@ -269,7 +295,9 @@ function AnalysisPage() {
                   {session.title}
                 </button>
                 <button
-                  onClick={() => handleDeleteSession(session.id)}
+                  onClick={() => {
+                    void handleDeleteSession(session.id)
+                  }}
                   aria-label={locale === 'zh' ? `删除会话：${session.title}` : `Delete session: ${session.title}`}
                   className="ml-2 rounded p-1 opacity-60 hover:opacity-100"
                 >
@@ -304,7 +332,9 @@ function AnalysisPage() {
                 {session.title}
               </button>
               <button
-                onClick={() => handleDeleteSession(session.id)}
+                onClick={() => {
+                  void handleDeleteSession(session.id)
+                }}
                 aria-label={locale === 'zh' ? `删除会话：${session.title}` : `Delete session: ${session.title}`}
                 className={`ml-2 rounded p-1 ${
                   session.id === activeSessionId ? 'hover:bg-white/20 dark:hover:bg-slate-300' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
@@ -445,6 +475,7 @@ function AnalysisPage() {
           onSendAudio={handleSendAudio}
           onSendText={handleSendText}
           onUploadAudio={handleUploadAudio}
+          onError={setAnalysisError}
           disabled={!configured || !activeSession}
           isAnalyzing={isAnalyzing}
         />

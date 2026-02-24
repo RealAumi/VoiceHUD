@@ -6,6 +6,7 @@ import { generateText } from 'ai'
 import { getPresetType } from './providers'
 
 const MAX_AUDIO_UPLOAD_BYTES = 20 * 1024 * 1024
+const MAX_CUSTOM_PROMPT_CHARS = 2000
 
 type Locale = 'zh' | 'en'
 
@@ -177,6 +178,13 @@ function estimateBase64Size(base64: string): number {
   return Math.floor((trimmed.length * 3) / 4)
 }
 
+function sanitizeCustomPrompt(prompt: string): string {
+  return prompt
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '')
+    .slice(0, MAX_CUSTOM_PROMPT_CHARS)
+    .trim()
+}
+
 function createModel(config: ProviderRequestInput, overrideBaseURL?: string) {
   const providerType = getPresetType(config.id)
 
@@ -300,6 +308,7 @@ export const analyzeVoiceServerFn = createServerFn({ method: 'POST' })
     }
 
     const hasAudio = data.audio.base64.length > 0
+    const hasUserConversation = data.conversation.some((turn) => turn.role === 'user')
     const mediaType = data.audio.mediaType || 'audio/webm'
 
     if (hasAudio) {
@@ -326,7 +335,7 @@ export const analyzeVoiceServerFn = createServerFn({ method: 'POST' })
           ),
         }
       }
-    } else if (data.conversation.length === 0) {
+    } else if (!hasUserConversation) {
       return {
         text: '',
         error: localize(data.locale, '请提供音频或文字消息', 'Please provide audio or a text message.'),
@@ -334,7 +343,12 @@ export const analyzeVoiceServerFn = createServerFn({ method: 'POST' })
     }
 
     try {
-      const prompt = data.customPrompt || getVoiceAnalysisPrompt(data.locale)
+      const customPrompt = sanitizeCustomPrompt(data.customPrompt)
+      const prompt = customPrompt || getVoiceAnalysisPrompt(data.locale)
+      const continuationPrompt =
+        data.locale === 'zh'
+          ? `${prompt}\n\n请结合此前多轮对话上下文继续给出建议，保持和上一次建议连贯。`
+          : `${prompt}\n\nContinue from previous turns and keep the coaching suggestions coherent with prior feedback.`
       let text = ''
 
       await tryGenerateWithFallbacks(data, async (model) => {
@@ -343,30 +357,16 @@ export const analyzeVoiceServerFn = createServerFn({ method: 'POST' })
           content: turn.content,
         }))
 
-        const userParts: Array<{ type: 'text'; text: string } | { type: 'file'; data: string; mediaType: string }> = []
+        const userParts: Array<{ type: 'text'; text: string } | { type: 'file'; data: string; mediaType: string }> = [{
+          type: 'text',
+          text: continuationPrompt,
+        }]
 
         if (data.audio.base64) {
-          userParts.push(
-            {
-              type: 'text',
-              text:
-                data.locale === 'zh'
-                  ? `${prompt}\n\n请结合此前多轮对话上下文继续给出建议，保持和上一次建议连贯。`
-                  : `${prompt}\n\nContinue from previous turns and keep the coaching suggestions coherent with prior feedback.`,
-            },
-            {
-              type: 'file',
-              data: data.audio.base64,
-              mediaType,
-            }
-          )
-        } else {
           userParts.push({
-            type: 'text',
-            text:
-              data.locale === 'zh'
-                ? `${prompt}\n\n请结合此前多轮对话上下文继续给出建议，保持和上一次建议连贯。`
-                : `${prompt}\n\nContinue from previous turns and keep the coaching suggestions coherent with prior feedback.`,
+            type: 'file',
+            data: data.audio.base64,
+            mediaType,
           })
         }
 
